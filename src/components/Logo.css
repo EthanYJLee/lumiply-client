@@ -1,0 +1,41 @@
+.logo {
+  display: inline-block;
+  user-select: none;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  overflow: visible;
+}
+
+.logo svg {
+  overflow: visible;
+}
+
+.logo:hover {
+  transform: scale(1.05);
+  opacity: 0.9;
+}
+
+.logo-default {
+  /* 기본 스타일 */
+}
+
+.logo-light {
+  /* 밝은 배경용 */
+  filter: brightness(0.9);
+}
+
+.logo-dark {
+  /* 어두운 배경용 (기본) */
+}
+
+.logo-minimal {
+  /* 미니멀 버전 - 글로우 효과 제거 */
+}
+
+.logo-minimal text {
+  filter: none;
+}
+
+.logo-minimal rect {
+  filter: none;
+}
+

@@ -1,0 +1,91 @@
+<svg width="200" height="60" viewBox="0 0 220 60" xmlns="http://www.w3.org/2000/svg" style="overflow: visible;">
+  <defs>
+    <!-- 그라데이션 정의 -->
+    <linearGradient id="glowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="2.5%" style="stop-color:#fefeff;stop-opacity:0.995" />
+      <stop offset="5%" style="stop-color:#fdfdfe;stop-opacity:0.99" />
+      <stop offset="7.5%" style="stop-color:#fcfcfe;stop-opacity:0.985" />
+      <stop offset="10%" style="stop-color:#fafbff;stop-opacity:0.98" />
+      <stop offset="12.5%" style="stop-color:#f9faff;stop-opacity:0.975" />
+      <stop offset="15%" style="stop-color:#f7f9ff;stop-opacity:0.97" />
+      <stop offset="17.5%" style="stop-color:#f6f8ff;stop-opacity:0.965" />
+      <stop offset="20%" style="stop-color:#f5f7ff;stop-opacity:0.96" />
+      <stop offset="22.5%" style="stop-color:#f3f6ff;stop-opacity:0.955" />
+      <stop offset="25%" style="stop-color:#f2f5ff;stop-opacity:0.95" />
+      <stop offset="27.5%" style="stop-color:#f1f4ff;stop-opacity:0.945" />
+      <stop offset="30%" style="stop-color:#f0f3ff;stop-opacity:0.94" />
+      <stop offset="32.5%" style="stop-color:#eef2ff;stop-opacity:0.935" />
+      <stop offset="35%" style="stop-color:#edf1ff;stop-opacity:0.93" />
+      <stop offset="37.5%" style="stop-color:#ebefff;stop-opacity:0.925" />
+      <stop offset="40%" style="stop-color:#e8ecff;stop-opacity:0.91" />
+      <stop offset="42.5%" style="stop-color:#e6eaff;stop-opacity:0.905" />
+      <stop offset="45%" style="stop-color:#e4e9ff;stop-opacity:0.9" />
+      <stop offset="47.5%" style="stop-color:#e2e8ff;stop-opacity:0.895" />
+      <stop offset="50%" style="stop-color:#e0e7ff;stop-opacity:0.88" />
+      <stop offset="52.5%" style="stop-color:#dde5ff;stop-opacity:0.875" />
+      <stop offset="55%" style="stop-color:#dae3ff;stop-opacity:0.87" />
+      <stop offset="57.5%" style="stop-color:#d8e1ff;stop-opacity:0.865" />
+      <stop offset="60%" style="stop-color:#d6deff;stop-opacity:0.85" />
+      <stop offset="62.5%" style="stop-color:#d3dcfe;stop-opacity:0.845" />
+      <stop offset="65%" style="stop-color:#d0d9fe;stop-opacity:0.84" />
+      <stop offset="67.5%" style="stop-color:#ced7fe;stop-opacity:0.835" />
+      <stop offset="70%" style="stop-color:#cbd5fe;stop-opacity:0.82" />
+      <stop offset="72.5%" style="stop-color:#c7d2fe;stop-opacity:0.815" />
+      <stop offset="75%" style="stop-color:#c4d0fe;stop-opacity:0.81" />
+      <stop offset="77.5%" style="stop-color:#c0cdfe;stop-opacity:0.805" />
+      <stop offset="80%" style="stop-color:#bcc9fe;stop-opacity:0.78" />
+      <stop offset="82.5%" style="stop-color:#b6c5fd;stop-opacity:0.775" />
+      <stop offset="85%" style="stop-color:#b0c1fd;stop-opacity:0.77" />
+      <stop offset="87.5%" style="stop-color:#aabdfd;stop-opacity:0.765" />
+      <stop offset="90%" style="stop-color:#a8b9fd;stop-opacity:0.73" />
+      <stop offset="92.5%" style="stop-color:#9db0fc;stop-opacity:0.72" />
+      <stop offset="95%" style="stop-color:#8fa5fb;stop-opacity:0.71" />
+      <stop offset="97.5%" style="stop-color:#7a94f9;stop-opacity:0.695" />
+      <stop offset="100%" style="stop-color:#667eea;stop-opacity:0.68" />
+    </linearGradient>
+    
+    <!-- 글로우 필터 -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- 배경 글로우 -->
+    <filter id="bgGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4"/>
+    </filter>
+  </defs>
+  
+  <!-- 아이콘: 빛나는 사각형 -->
+  <g transform="translate(5, 5)">
+    <!-- 10개의 레이어로 구성된 그라데이션 -->
+    <rect x="0" y="0" width="30" height="30" rx="5" fill="url(#glowGradient)" opacity="0.445" filter="url(#bgGlow)"/>
+    <rect x="0.9" y="0.9" width="28.2" height="28.2" rx="4.65" fill="url(#glowGradient)" opacity="0.4"/>
+    <rect x="1.8" y="1.8" width="26.4" height="26.4" rx="4.3" fill="url(#glowGradient)" opacity="0.355"/>
+    <rect x="2.7" y="2.7" width="24.6" height="24.6" rx="3.95" fill="url(#glowGradient)" opacity="0.31"/>
+    <rect x="3.6" y="3.6" width="22.8" height="22.8" rx="3.6" fill="url(#glowGradient)" opacity="0.265"/>
+    <rect x="4.5" y="4.5" width="21" height="21" rx="3.25" fill="url(#glowGradient)" opacity="0.22"/>
+    <rect x="5.4" y="5.4" width="19.2" height="19.2" rx="2.9" fill="url(#glowGradient)" opacity="0.175"/>
+    <rect x="6.3" y="6.3" width="17.4" height="17.4" rx="2.55" fill="url(#glowGradient)" opacity="0.13"/>
+    <rect x="7.2" y="7.2" width="15.6" height="15.6" rx="2.2" fill="url(#glowGradient)" opacity="0.085"/>
+    <rect x="8.1" y="8.1" width="13.8" height="13.8" rx="1.85" fill="url(#glowGradient)" opacity="0.04"/>
+    <!-- 메인 사각형 -->
+    <rect x="10" y="10" width="26" height="26" rx="4" fill="url(#glowGradient)" filter="url(#glow)"/>
+  </g>
+  
+  <!-- 텍스트: Lumiply -->
+  <text x="45" y="38" font-family="'Inter', 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif" 
+        font-size="28" font-weight="700" fill="#ffffff" letter-spacing="-0.8">
+    Lumiply
+  </text>
+  
+  <!-- 텍스트 글로우 효과 -->
+  <text x="45" y="38" font-family="'Inter', 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif" 
+        font-size="28" font-weight="700" fill="url(#glowGradient)" opacity="0.8" letter-spacing="-0.8" filter="url(#glow)">
+    Lumiply
+  </text>
+</svg>

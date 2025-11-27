@@ -1,315 +1,215 @@
-import { useCallback, useState, useRef, useEffect } from "react";
-import { useDropzone } from "react-dropzone";
+import { useState, useEffect, useCallback, useRef } from "react";
 import "./App.css";
 
-// 조명 이미지 경로 (public/lights 폴더의 png 파일들을 동적으로 생성)
-const LIGHT_IMAGES = Array.from({ length: 105 }, (_, i) => `/lights/${i}.png`);
+// Components
+import UploadZone from "./components/UploadZone/UploadZone";
+import LightCarousel from "./components/LightCarousel/LightCarousel";
+import ImageEditor from "./components/ImageEditor/ImageEditor";
+import ControlPanel from "./components/ControlPanel/ControlPanel";
+
+// Hooks
+import { useImageUpload } from "./hooks/useImageUpload";
+import { useLightManagement } from "./hooks/useLightManagement";
+import { useDragAndDrop } from "./hooks/useDragAndDrop";
+import { useImageGeneration } from "./hooks/useImageGeneration";
 
 function App() {
   const [uploadedFile, setUploadedFile] = useState(null);
-  const [lights, setLights] = useState([]);
-  const [selectedLightId, setSelectedLightId] = useState(null);
-  const [colorTemperature, setColorTemperature] = useState("#ffffff");
-  const [lightIntensity, setLightIntensity] = useState(50);
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartPosRef = useRef(null);
-  const dragStartLightIdRef = useRef(null);
-  const imageContainerRef = useRef(null);
-  const draggedLightRef = useRef(null);
 
-  const onDrop = useCallback((acceptedFiles) => {
-    if (acceptedFiles && acceptedFiles.length > 0) {
-      const file = acceptedFiles[0];
-      setUploadedFile(file);
-      console.log("Uploaded file:", file);
-    }
+  // 이미지 업로드 핸들러
+  const handleFileUpload = useCallback((file) => {
+    setUploadedFile(file);
   }, []);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      "image/*": [".jpeg", ".jpg", ".png", ".gif", ".webp", ".svg"],
+  // 이미지 업로드 훅
+  const { getRootProps, getInputProps, isDragActive } = useImageUpload(uploadedFile, handleFileUpload);
+
+  // 조명 관리 훅
+  const {
+    lights,
+    selectedLightId,
+    colorTemperature,
+    lightIntensity,
+    setColorTemperature,
+    setLightIntensity,
+    addLight,
+    removeLight,
+    updateLightPosition,
+    updateLightScale,
+    updateSelectedLightProperties,
+    resetLights,
+    setSelectedLightId,
+    selectLight,
+  } = useLightManagement();
+
+  // 이미지 생성 훅
+  const { generateAndUpload, startJobPolling, resetProcessingStatus } = useImageGeneration();
+
+  // 드래그 앤 드롭 핸들러
+  const handleLightDrop = useCallback(
+    (lightPath, position) => {
+      addLight(lightPath, position);
     },
-    multiple: false,
-    noClick: !!uploadedFile, // 이미지가 업로드되면 클릭 비활성화
-  });
+    [addLight]
+  );
 
-  const handleLightDragStart = (e, lightPath) => {
-    e.preventDefault();
-    draggedLightRef.current = lightPath;
-  };
+  const handleLightDrag = useCallback(
+    (lightId, position) => {
+      updateLightPosition(lightId, position);
+    },
+    [updateLightPosition]
+  );
 
-  const handleImageDrop = (e) => {
-    e.preventDefault();
-    if (draggedLightRef.current && imageContainerRef.current) {
-      const rect = imageContainerRef.current.getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width) * 100;
-      const y = ((e.clientY - rect.top) / rect.height) * 100;
+  const handleLightResize = useCallback(
+    (lightId, scale) => {
+      updateLightScale(lightId, scale);
+    },
+    [updateLightScale]
+  );
 
-      const newLight = {
-        id: Date.now() + Math.random(),
-        lightPath: draggedLightRef.current,
-        position: { x, y },
-        colorTemperature: "#ffffff",
-        intensity: 50,
-      };
+  // 조명 선택 핸들러
+  const handleLightSelect = useCallback(
+    (lightId) => {
+      selectLight(lightId);
+    },
+    [selectLight]
+  );
 
-      setLights([...lights, newLight]);
-      setSelectedLightId(newLight.id);
-      setColorTemperature(newLight.colorTemperature);
-      setLightIntensity(newLight.intensity);
-    }
-    draggedLightRef.current = null;
-  };
+  // main-image ref
+  const mainImageRef = useRef(null);
 
-  const handleImageDragOver = (e) => {
-    e.preventDefault();
-  };
+  // 드래그 앤 드롭 훅
+  const {
+    imageContainerRef,
+    handleLightDragStart,
+    handleImageDrop,
+    handleImageDragOver,
+    handleOverlayMouseDown,
+    handleResizeStart: handleResizeStartBase,
+  } = useDragAndDrop(handleLightDrop, handleLightDrag, handleLightResize, handleLightSelect, mainImageRef);
 
-  const handleImageClick = (e) => {
-    // 드래그 중이면 클릭 이벤트 무시
-    if (isDragging) {
-      return;
-    }
-    // 조명 오버레이를 클릭한 경우 무시
-    if (e.target.closest(".light-overlay")) {
-      return;
-    }
-    // 선택 해제
-    setSelectedLightId(null);
-  };
-
-  const handleOverlayMouseDown = (e, lightId) => {
-    // 제거 버튼을 클릭한 경우 드래그 시작하지 않음
-    if (e.target.closest(".light-remove-btn")) {
-      return;
-    }
-    e.stopPropagation();
-    e.preventDefault();
-
-    const startX = e.clientX;
-    const startY = e.clientY;
-    dragStartPosRef.current = { x: startX, y: startY };
-    dragStartLightIdRef.current = lightId;
-    setIsDragging(false);
-
-    setSelectedLightId(lightId);
-    const light = lights.find((l) => l.id === lightId);
-    if (light) {
-      setColorTemperature(light.colorTemperature);
-      setLightIntensity(light.intensity);
-    }
-
-    // 드래그 이벤트 리스너 등록
-    const handleMouseMove = (moveEvent) => {
-      if (!dragStartPosRef.current || !dragStartLightIdRef.current || !imageContainerRef.current) return;
-
-      const deltaX = Math.abs(moveEvent.clientX - dragStartPosRef.current.x);
-      const deltaY = Math.abs(moveEvent.clientY - dragStartPosRef.current.y);
-      const dragThreshold = 5; // 5px 이상 이동해야 드래그로 인식
-
-      // 드래그 임계값을 넘으면 드래그 시작
-      setIsDragging((prev) => {
-        if (!prev && (deltaX > dragThreshold || deltaY > dragThreshold)) {
-          return true;
-        }
-        return prev;
-      });
-
-      // 드래그 중일 때만 위치 업데이트
-      if (deltaX > dragThreshold || deltaY > dragThreshold) {
-        const rect = imageContainerRef.current.getBoundingClientRect();
-        const x = Math.max(0, Math.min(100, ((moveEvent.clientX - rect.left) / rect.width) * 100));
-        const y = Math.max(0, Math.min(100, ((moveEvent.clientY - rect.top) / rect.height) * 100));
-
-        setLights((prevLights) =>
-          prevLights.map((light) => (light.id === dragStartLightIdRef.current ? { ...light, position: { x, y } } : light))
-        );
+  // 리사이즈 핸들러 (light 객체 필요)
+  const handleResizeStart = useCallback(
+    (e, lightId) => {
+      const light = lights.find((l) => l.id === lightId);
+      if (light) {
+        handleResizeStartBase(e, lightId, light, () => imageContainerRef.current?.getBoundingClientRect());
       }
-    };
+    },
+    [lights, handleResizeStartBase, imageContainerRef]
+  );
 
-    const handleMouseUp = () => {
-      setIsDragging(false);
-      dragStartPosRef.current = null;
-      dragStartLightIdRef.current = null;
+  // 이미지 클릭 핸들러
+  const handleImageClick = useCallback(
+    (e) => {
+      if (e.target === imageContainerRef.current || e.target.classList.contains("main-image")) {
+        setSelectedLightId(null);
+      }
+    },
+    [imageContainerRef, setSelectedLightId]
+  );
 
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
+  // 조명 제거 핸들러
+  const handleRemoveLight = useCallback(
+    (e, lightId) => {
+      e.stopPropagation();
+      removeLight(lightId);
+    },
+    [removeLight]
+  );
 
-    document.addEventListener("mousemove", handleMouseMove, { passive: false });
-    document.addEventListener("mouseup", handleMouseUp, { once: true });
-  };
+  // 리셋 핸들러
+  const handleReset = useCallback(() => {
+    setUploadedFile(null);
+    resetLights();
+    resetProcessingStatus();
+  }, [resetLights, resetProcessingStatus]);
 
-  const handleRemoveLight = (e, lightId) => {
-    e.stopPropagation();
-    setLights(lights.filter((l) => l.id !== lightId));
-    if (selectedLightId === lightId) {
-      setSelectedLightId(null);
-    }
-  };
-
-  const handleGenerate = () => {
+  // 이미지 생성 및 전송 핸들러
+  const handleGenerate = useCallback(async () => {
     if (!uploadedFile || lights.length === 0) {
       alert("이미지와 조명을 모두 선택해주세요.");
       return;
     }
-    console.log("Generate clicked:", {
-      image: uploadedFile.name,
-      lights: lights,
-    });
-    // 여기에 조명 합성 로직을 추가하세요
-  };
+
+    try {
+      const { job_id, message } = await generateAndUpload(uploadedFile, lights);
+      alert(message || "이미지 업로드 완료. 처리 중입니다.");
+      startJobPolling(job_id);
+    } catch (error) {
+      console.error("이미지 생성 오류:", error);
+      alert(`이미지 생성에 실패했습니다: ${error.message}`);
+    }
+  }, [uploadedFile, lights, generateAndUpload, startJobPolling]);
+
+  // 조명 카루셀에서 조명 선택 핸들러
+  const handleLightCarouselSelect = useCallback(
+    (lightPath) => {
+      if (imageContainerRef.current) {
+        addLight(lightPath, { x: 50, y: 50 });
+      }
+    },
+    [addLight, imageContainerRef]
+  );
 
   // 선택된 조명의 속성 업데이트
   useEffect(() => {
     if (selectedLightId) {
-      setLights((prevLights) =>
-        prevLights.map((light) => (light.id === selectedLightId ? { ...light, colorTemperature, intensity: lightIntensity } : light))
-      );
+      const light = lights.find((l) => l.id === selectedLightId);
+      if (light) {
+        // 현재 조명의 값과 다를 때만 업데이트
+        if (light.colorTemperature !== colorTemperature || light.intensity !== lightIntensity) {
+          updateSelectedLightProperties({
+            colorTemperature,
+            intensity: lightIntensity,
+          });
+        }
+      }
     }
-  }, [colorTemperature, lightIntensity, selectedLightId]);
+  }, [colorTemperature, lightIntensity, selectedLightId, updateSelectedLightProperties, lights]);
 
   return (
     <div className={`App ${uploadedFile ? "has-upload" : ""}`}>
       {!uploadedFile ? (
-        <div className="upload-container">
-          <div {...getRootProps()} className={`upload-zone ${isDragActive ? "drag-active" : ""}`}>
-            <input {...getInputProps()} />
-            <div className="upload-content">
-              <div className="upload-icon">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path
-                    d="M12 15V3M12 3L8 7M12 3L16 7M2 17L2 19C2 20.1046 2.89543 21 4 21L20 21C21.1046 21 22 20.1046 22 19V17"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-              {isDragActive ? (
-                <p className="upload-text">이미지를 여기에 놓으세요</p>
-              ) : (
-                <>
-                  <p className="upload-text">
-                    <span className="upload-highlight">이미지를 클릭</span>하거나
-                    <br />
-                    여기로 드래그하세요
-                  </p>
-                  <p className="upload-hint">PNG, JPG 지원</p>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+        <UploadZone getRootProps={getRootProps} getInputProps={getInputProps} isDragActive={isDragActive} />
       ) : (
-        <div className="editor-container">
-          {/* 좌측: 조명 이미지 Carousel */}
-          <div className="light-carousel">
-            <div className="carousel-header">조명 선택</div>
-            <div className="carousel-content">
-              {LIGHT_IMAGES.map((lightPath, index) => (
-                <div
-                  key={index}
-                  className="light-item"
-                  draggable
-                  onDragStart={(e) => handleLightDragStart(e, lightPath)}
-                  onClick={() => {
-                    // 조명을 클릭하면 이미지 중앙에 추가
-                    if (imageContainerRef.current) {
-                      const newLight = {
-                        id: Date.now() + Math.random(),
-                        lightPath: lightPath,
-                        position: { x: 50, y: 50 },
-                        colorTemperature: "#ffffff",
-                        intensity: 50,
-                      };
-                      setLights([...lights, newLight]);
-                      setSelectedLightId(newLight.id);
-                      setColorTemperature(newLight.colorTemperature);
-                      setLightIntensity(newLight.intensity);
-                    }
-                  }}
-                >
-                  <img src={lightPath} alt={`Light ${index + 1}`} onError={(e) => (e.target.style.display = "none")} />
-                </div>
-              ))}
-            </div>
-          </div>
+        <div
+          className="editor-container"
+          onClick={(e) => {
+            // ControlPanel이나 색상 팔레트를 클릭한 경우 선택 유지
+            if (e.target.closest(".control-panel") || e.target.closest(".color-picker-dropdown")) {
+              return;
+            }
+            if (!e.target.closest(".image-container") && !e.target.closest(".light-overlay")) {
+              setSelectedLightId(null);
+            }
+          }}
+        >
+          <LightCarousel onLightSelect={handleLightCarouselSelect} onLightDragStart={handleLightDragStart} />
 
-          {/* 중앙: 업로드된 이미지 */}
-          <div className="image-editor">
-            <div
-              ref={imageContainerRef}
-              className="image-container"
-              onDrop={handleImageDrop}
-              onDragOver={handleImageDragOver}
-              onClick={handleImageClick}
-            >
-              <img src={URL.createObjectURL(uploadedFile)} alt="Uploaded" className="main-image" />
-              {lights.map((light) => (
-                <div
-                  key={light.id}
-                  className={`light-overlay ${selectedLightId === light.id ? "selected" : ""}`}
-                  style={{
-                    left: `${light.position.x}%`,
-                    top: `${light.position.y}%`,
-                    transform: "translate(-50%, -50%)",
-                    filter: `drop-shadow(0 0 ${light.intensity / 2}px ${light.colorTemperature}) brightness(${1 + light.intensity / 200})`,
-                  }}
-                  onMouseDown={(e) => handleOverlayMouseDown(e, light.id)}
-                >
-                  <button className="light-remove-btn" onClick={(e) => handleRemoveLight(e, light.id)} aria-label="Remove light">
-                    ×
-                  </button>
-                  <img src={light.lightPath} alt="Light" className="light-image" />
-                </div>
-              ))}
-            </div>
-            <button className="generate-button" onClick={handleGenerate}>
-              Generate
-            </button>
-          </div>
+          <ImageEditor
+            uploadedFile={uploadedFile}
+            lights={lights}
+            selectedLightId={selectedLightId}
+            imageContainerRef={imageContainerRef}
+            mainImageRef={mainImageRef}
+            onImageDrop={handleImageDrop}
+            onImageDragOver={handleImageDragOver}
+            onImageClick={handleImageClick}
+            onOverlayMouseDown={handleOverlayMouseDown}
+            onRemoveLight={handleRemoveLight}
+            onResizeStart={handleResizeStart}
+            onReset={handleReset}
+            onGenerate={handleGenerate}
+          />
 
-          {/* 우측: 컨트롤 패널 */}
-          <div className="control-panel">
-            {selectedLightId ? (
-              <>
-                {/* 색온도 팔레트 */}
-                <div className="control-section">
-                  <div className="control-label">색온도</div>
-                  <div className="color-picker-container">
-                    <input
-                      type="color"
-                      value={colorTemperature}
-                      onChange={(e) => setColorTemperature(e.target.value)}
-                      className="color-picker"
-                    />
-                    <div className="color-preview" style={{ backgroundColor: colorTemperature }}></div>
-                  </div>
-                </div>
-
-                {/* 광량 조절 */}
-                <div className="control-section">
-                  <div className="control-label">광량: {lightIntensity}%</div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={lightIntensity}
-                    onChange={(e) => setLightIntensity(Number(e.target.value))}
-                    className="intensity-slider"
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="control-placeholder">
-                <p>조명을 선택하거나 추가하세요</p>
-                <p className="control-hint">좌측에서 조명을 클릭하거나 드래그하여 추가할 수 있습니다</p>
-              </div>
-            )}
-          </div>
+          <ControlPanel
+            selectedLightId={selectedLightId}
+            colorTemperature={colorTemperature}
+            lightIntensity={lightIntensity}
+            onColorTemperatureChange={setColorTemperature}
+            onLightIntensityChange={setLightIntensity}
+          />
         </div>
       )}
     </div>
