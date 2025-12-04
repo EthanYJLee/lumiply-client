@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { Alert } from "react-bootstrap";
 import "./App.css";
 
 // Components
 import UploadZone from "./components/UploadZone/UploadZone";
 import LightCarousel from "./components/LightCarousel/LightCarousel";
 import ImageEditor from "./components/ImageEditor/ImageEditor";
-import ControlPanel from "./components/ControlPanel/ControlPanel";
+// import ControlPanel from "./components/ControlPanel/ControlPanel";
+import ResultHistory from "./components/ResultHistory/ResultHistory";
+import Logo from "./components/Logo";
 
 // Hooks
 import { useImageUpload } from "./hooks/useImageUpload";
@@ -15,14 +18,7 @@ import { useImageGeneration } from "./hooks/useImageGeneration";
 
 function App() {
   const [uploadedFile, setUploadedFile] = useState(null);
-
-  // 이미지 업로드 핸들러
-  const handleFileUpload = useCallback((file) => {
-    setUploadedFile(file);
-  }, []);
-
-  // 이미지 업로드 훅
-  const { getRootProps, getInputProps, isDragActive } = useImageUpload(uploadedFile, handleFileUpload);
+  const [globalAlert, setGlobalAlert] = useState(null); // { variant, message }
 
   // 조명 관리 훅
   const {
@@ -30,8 +26,8 @@ function App() {
     selectedLightId,
     colorTemperature,
     lightIntensity,
-    setColorTemperature,
-    setLightIntensity,
+    // setColorTemperature,
+    // setLightIntensity,
     addLight,
     removeLight,
     updateLightPosition,
@@ -43,14 +39,45 @@ function App() {
   } = useLightManagement();
 
   // 이미지 생성 훅
-  const { generateAndUpload, startJobPolling, resetProcessingStatus } = useImageGeneration();
+  const {
+    processingStatus,
+    compositedPreviewUrl,
+    generatedViewSize,
+    resultImageUrl,
+    resultImagesByColor,
+    generationMessage,
+    generationMessageType,
+    isProcessing,
+    generateAndUpload,
+    startJobPolling,
+    resetProcessingStatus,
+    history,
+    setActiveResultColor,
+  } = useImageGeneration();
+
+  // 이미지 업로드 핸들러 (업로드 또는 교체 시 공통 사용)
+  const handleFileUpload = useCallback(
+    (file) => {
+      setUploadedFile(file);
+      resetLights();
+      resetProcessingStatus();
+    },
+    [resetLights, resetProcessingStatus]
+  );
+
+  // 이미지 업로드 훅
+  const { getRootProps, getInputProps, isDragActive } = useImageUpload(uploadedFile, handleFileUpload);
 
   // 드래그 앤 드롭 핸들러
   const handleLightDrop = useCallback(
     (lightPath, position) => {
+      if (lights.length >= 1) {
+        setGlobalAlert({ variant: "warning", message: "조명은 한 개만 배치할 수 있습니다." });
+        return;
+      }
       addLight(lightPath, position);
     },
-    [addLight]
+    [addLight, lights]
   );
 
   const handleLightDrag = useCallback(
@@ -77,6 +104,9 @@ function App() {
 
   // main-image ref
   const mainImageRef = useRef(null);
+
+  const [activeHistoryId, setActiveHistoryId] = useState(null);
+  const [selectedColorKey, setSelectedColorKey] = useState("white");
 
   // 드래그 앤 드롭 훅
   const {
@@ -118,8 +148,8 @@ function App() {
     [removeLight]
   );
 
-  // 리셋 핸들러
-  const handleReset = useCallback(() => {
+  // 초기 화면으로 돌아가는 핸들러 (헤더 로고 클릭 시)
+  const handleResetToUpload = useCallback(() => {
     setUploadedFile(null);
     resetLights();
     resetProcessingStatus();
@@ -133,23 +163,61 @@ function App() {
     }
 
     try {
-      const { job_id, message } = await generateAndUpload(uploadedFile, lights);
-      alert(message || "이미지 업로드 완료. 처리 중입니다.");
+      const imageRect = mainImageRef.current?.getBoundingClientRect();
+      const containerRect = imageContainerRef.current?.getBoundingClientRect();
+
+      let lightsForComposite = lights;
+      if (imageRect && containerRect) {
+        const offsetLeft = imageRect.left - containerRect.left;
+        const offsetTop = imageRect.top - containerRect.top;
+
+        lightsForComposite = lights.map((light) => {
+          // 현재 light.position 은 컨테이너 기준 퍼센트 값
+          const xInContainerPx = (light.position.x / 100) * containerRect.width;
+          const yInContainerPx = (light.position.y / 100) * containerRect.height;
+
+          // 이미지 내부 좌표(px)로 변환
+          const xInImagePx = xInContainerPx - offsetLeft;
+          const yInImagePx = yInContainerPx - offsetTop;
+
+          const xImagePercent = (xInImagePx / imageRect.width) * 100;
+          const yImagePercent = (yInImagePx / imageRect.height) * 100;
+
+          return {
+            ...light,
+            position: {
+              x: xImagePercent,
+              y: yImagePercent,
+            },
+          };
+        });
+      }
+
+      const displaySize = imageRect ? { width: Math.round(imageRect.width), height: Math.round(imageRect.height) } : undefined;
+
+      const { job_id, message } = await generateAndUpload(uploadedFile, lightsForComposite, displaySize);
+      // alert(message || "이미지 업로드 완료. 처리 중입니다.");
+      console.log(message);
       startJobPolling(job_id);
     } catch (error) {
       console.error("이미지 생성 오류:", error);
       alert(`이미지 생성에 실패했습니다: ${error.message}`);
     }
-  }, [uploadedFile, lights, generateAndUpload, startJobPolling]);
+  }, [uploadedFile, lights, generateAndUpload, startJobPolling, mainImageRef, imageContainerRef]);
 
-  // 조명 카루셀에서 조명 선택 핸들러
+  // 조명 캐러셀에서 조명 선택 핸들러
   const handleLightCarouselSelect = useCallback(
     (lightPath) => {
       if (imageContainerRef.current) {
+        if (lights.length >= 1) {
+          setGlobalAlert({ variant: "warning", message: "조명은 한 개만 배치할 수 있습니다." });
+          const timer = setTimeout(() => setGlobalAlert(null), 2000);
+          return () => clearTimeout(timer);
+        }
         addLight(lightPath, { x: 50, y: 50 });
       }
     },
-    [addLight, imageContainerRef]
+    [addLight, imageContainerRef, lights]
   );
 
   // 선택된 조명의 속성 업데이트
@@ -168,8 +236,66 @@ function App() {
     }
   }, [colorTemperature, lightIntensity, selectedLightId, updateSelectedLightProperties, lights]);
 
+  // 전역 Alert 표시 (2초 뒤 자동 닫힘)
+  useEffect(() => {
+    if (generationMessageType === "success" && generationMessage) {
+      setGlobalAlert({ variant: "success", message: generationMessage });
+      const timer = setTimeout(() => setGlobalAlert(null), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [generationMessageType, generationMessage]);
+
+  // 가장 최신 히스토리 항목을 기본 선택
+  useEffect(() => {
+    if (history.length === 0) {
+      if (activeHistoryId) {
+        setActiveHistoryId(null);
+      }
+      return;
+    }
+    const latestEntry = history[0];
+    const latestId = latestEntry.id;
+    if (!activeHistoryId || !history.some((h) => h.id === activeHistoryId)) {
+      setActiveHistoryId(latestId);
+      if (latestEntry.colorKey) {
+        setSelectedColorKey(latestEntry.colorKey);
+        setActiveResultColor(latestEntry.colorKey);
+      }
+    }
+  }, [history, activeHistoryId, setActiveResultColor]);
+
+  const activeHistoryEntry = history.find((h) => h.id === activeHistoryId) || null;
+  const effectivePreviewUrl = activeHistoryEntry?.previewUrl || compositedPreviewUrl;
+
+  // 현재 선택된 색상의 URL을 우선 사용 (색상별 결과 지원용)
+  const currentColorUrl = (resultImagesByColor && selectedColorKey && resultImagesByColor[selectedColorKey]) || null;
+
+  // 결과 이미지는 (색상별 URL) → (현재 상태) → (히스토리 기본 URL) 순서로 선택
+  const effectiveResultUrl = currentColorUrl || resultImageUrl || activeHistoryEntry?.resultUrl || null;
+  const effectiveViewSize = activeHistoryEntry?.viewSize || generatedViewSize;
+
   return (
     <div className={`App ${uploadedFile ? "has-upload" : ""}`}>
+      {globalAlert && (
+        <div className="global-alert-container">
+          <Alert variant={globalAlert.variant} className="mb-0">
+            {globalAlert.message}
+          </Alert>
+        </div>
+      )}
+
+      {uploadedFile && (
+        <header className="app-header">
+          <div className="app-header-inner">
+            <button className="header-logo-button app-header-left" type="button" onClick={handleResetToUpload}>
+              <Logo size="medium" variant="dark" />
+            </button>
+            {/* <div className="app-header-right">
+              <img src="/inisw.png" alt="INISW Academy" className="inisw-header-logo" />
+            </div> */}
+          </div>
+        </header>
+      )}
       {!uploadedFile ? (
         <UploadZone getRootProps={getRootProps} getInputProps={getInputProps} isDragActive={isDragActive} />
       ) : (
@@ -199,17 +325,44 @@ function App() {
             onOverlayMouseDown={handleOverlayMouseDown}
             onRemoveLight={handleRemoveLight}
             onResizeStart={handleResizeStart}
-            onReset={handleReset}
+            onImageReplace={handleFileUpload}
             onGenerate={handleGenerate}
+            processingStatus={processingStatus}
+            isProcessing={isProcessing}
+            compositedPreviewUrl={effectivePreviewUrl}
+            resultViewSize={effectiveViewSize}
+            resultImageUrl={effectiveResultUrl}
+            downloadUrl={currentColorUrl || effectiveResultUrl}
+            selectedColor={selectedColorKey}
+            onColorChange={(colorKey) => {
+              setSelectedColorKey(colorKey);
+              setActiveResultColor(colorKey);
+            }}
+            generationMessage={generationMessage}
+            generationMessageType={generationMessageType}
           />
 
-          <ControlPanel
-            selectedLightId={selectedLightId}
-            colorTemperature={colorTemperature}
-            lightIntensity={lightIntensity}
-            onColorTemperatureChange={setColorTemperature}
-            onLightIntensityChange={setLightIntensity}
-          />
+          <div className="right-column">
+            {/* <ControlPanel
+              selectedLightId={selectedLightId}
+              colorTemperature={colorTemperature}
+              lightIntensity={lightIntensity}
+              onColorTemperatureChange={setColorTemperature}
+              onLightIntensityChange={setLightIntensity}
+            /> */}
+            <ResultHistory
+              history={history}
+              activeId={activeHistoryId}
+              onSelect={(id) => {
+                setActiveHistoryId(id);
+                const entry = history.find((h) => h.id === id);
+                if (entry?.colorKey) {
+                  setSelectedColorKey(entry.colorKey);
+                  setActiveResultColor(entry.colorKey);
+                }
+              }}
+            />
+          </div>
         </div>
       )}
     </div>

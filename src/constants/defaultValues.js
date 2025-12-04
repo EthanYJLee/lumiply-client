@@ -1,6 +1,6 @@
 // 기본값 상수
 export const DEFAULT_COLOR_TEMPERATURE = "#ffffff";
-export const DEFAULT_LIGHT_INTENSITY = 50;
+export const DEFAULT_LIGHT_INTENSITY = 0;
 export const DEFAULT_LIGHT_SCALE = 1.0;
 export const DEFAULT_LIGHT_SIZE = 100;
 

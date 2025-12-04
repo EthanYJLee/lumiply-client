@@ -33,7 +33,7 @@ const UploadZone = ({ getRootProps, getInputProps, isDragActive }) => {
                 <br />
                 여기로 드래그하세요
               </p>
-              <p className="upload-hint">PNG, JPG 지원</p>
+              <p className="upload-hint">PNG, JPG, JPEG, WEBP 지원</p>
             </>
           )}
         </div>
@@ -43,4 +43,3 @@ const UploadZone = ({ getRootProps, getInputProps, isDragActive }) => {
 };
 
 export default UploadZone;
-

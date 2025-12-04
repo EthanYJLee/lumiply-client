@@ -1,4 +1,3 @@
-import { hexToRgb } from "./colorUtils";
 import { DEFAULT_LIGHT_SIZE, MIN_SCALE, MAX_SCALE } from "../constants/defaultValues";
 
 /**
@@ -21,33 +20,28 @@ export const loadImage = (src) => {
  * @param {CanvasRenderingContext2D} ctx - Canvas 컨텍스트
  * @param {HTMLImageElement} lightImage - 조명 이미지
  * @param {Object} light - 조명 객체
- * @param {number} canvasWidth - Canvas 너비
- * @param {number} canvasHeight - Canvas 높이
+ * @param {number} canvasWidth - Canvas 너비 (원본 이미지 너비)
+ * @param {number} canvasHeight - Canvas 높이 (원본 이미지 높이)
+ * @param {number} scaleX - 표시된 이미지 대비 원본 이미지의 가로 스케일 비율
+ * @param {number} scaleY - 표시된 이미지 대비 원본 이미지의 세로 스케일 비율
  */
-export const drawLightOnCanvas = (ctx, lightImage, light, canvasWidth, canvasHeight) => {
+export const drawLightOnCanvas = (ctx, lightImage, light, canvasWidth, canvasHeight, scaleX = 1, scaleY = 1) => {
   const lightX = (light.position.x / 100) * canvasWidth;
   const lightY = (light.position.y / 100) * canvasHeight;
-  const lightSize = DEFAULT_LIGHT_SIZE * (light.scale || 1.0);
-  const lightWidth = lightSize;
-  const lightHeight = lightSize;
+  const baseSize = DEFAULT_LIGHT_SIZE * (light.scale || 1.0);
+  const lightWidth = baseSize * scaleX;
+  const lightHeight = baseSize * scaleY;
 
   ctx.save();
 
-  const color = light.colorTemperature || "#ffffff";
-  const rgb = hexToRgb(color);
   const intensity = light.intensity || 50;
 
-  // 조명 이미지 그리기
-  ctx.globalCompositeOperation = "screen";
-  ctx.globalAlpha = intensity / 100;
+  // 조명 이미지를 원본 그대로(투명 배경 유지) 선명하게 그리기
+  // PNG 내부에 이미 광량/형태 정보가 들어있기 때문에 별도의 투명도/오버레이 처리를 하지 않는다.
+  ctx.globalCompositeOperation = "source-over";
+  ctx.globalAlpha = 1.0;
   ctx.filter = `brightness(${1 + intensity / 200})`;
   ctx.drawImage(lightImage, lightX - lightWidth / 2, lightY - lightHeight / 2, lightWidth, lightHeight);
-
-  // 색온도 오버레이 적용
-  ctx.globalCompositeOperation = "multiply";
-  ctx.globalAlpha = intensity / 200;
-  ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.5)`;
-  ctx.fillRect(lightX - lightWidth / 2, lightY - lightHeight / 2, lightWidth, lightHeight);
 
   ctx.restore();
 };
@@ -56,36 +50,41 @@ export const drawLightOnCanvas = (ctx, lightImage, light, canvasWidth, canvasHei
  * Canvas에 방 이미지와 조명들을 합성하는 함수
  * @param {HTMLImageElement} roomImage - 방 이미지
  * @param {Array} lights - 조명 배열
- * @returns {Promise<Blob>} 합성된 이미지 Blob
+ * @param {{ width: number, height: number } | undefined} displaySize - 화면에 표시된 이미지 크기
+ * @returns {Promise<Blob>} 합성된 이미지 Blob (원본 이미지와 동일한 해상도)
  */
-export const compositeImage = async (roomImage, lights) => {
+export const compositeImage = async (roomImage, lights, displaySize) => {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
 
-  canvas.width = roomImage.width;
-  canvas.height = roomImage.height;
+  const width = roomImage.width;
+  const height = roomImage.height;
 
-  // 방 이미지 그리기
-  ctx.drawImage(roomImage, 0, 0);
+  canvas.width = width;
+  canvas.height = height;
+
+  // 방 이미지 그리기 (원본 해상도)
+  ctx.drawImage(roomImage, 0, 0, width, height);
+
+  // 화면에 표시된 이미지 크기와 원본 해상도의 비율 계산
+  const scaleX = displaySize?.width ? width / displaySize.width : 1;
+  const scaleY = displaySize?.height ? height / displaySize.height : 1;
 
   // 각 조명 이미지 로드 및 그리기
   for (const light of lights) {
     const lightImage = await loadImage(light.lightPath);
-    drawLightOnCanvas(ctx, lightImage, light, canvas.width, canvas.height);
+    drawLightOnCanvas(ctx, lightImage, light, canvas.width, canvas.height, scaleX, scaleY);
   }
 
   // Canvas를 Blob으로 변환
   return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) {
-          reject(new Error("이미지 생성에 실패했습니다."));
-          return;
-        }
-        resolve(blob);
-      },
-      "image/png"
-    );
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error("이미지 생성에 실패했습니다."));
+        return;
+      }
+      resolve(blob);
+    }, "image/png");
   });
 };
 
@@ -97,4 +96,3 @@ export const compositeImage = async (roomImage, lights) => {
 export const clampScale = (scale) => {
   return Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale));
 };
-
