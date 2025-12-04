@@ -55,11 +55,6 @@ const ImageEditor = ({
     if (!targetUrl) return;
 
     try {
-      // 확장자 추출
-      const urlParts = targetUrl.split("?");
-      const cleanUrl = urlParts[0];
-      const ext = cleanUrl.split(".").pop() || "png";
-
       // 파일명: YYYYMMDD_HHMMSS_output_색상.ext
       const now = new Date();
       const yyyy = now.getFullYear();
@@ -72,21 +67,32 @@ const ImageEditor = ({
       const timePart = `${hh}${mi}${ss}`;
       const colorPart = (selectedColor || "white").toLowerCase();
 
+      const urlParts = targetUrl.split("?");
+      const cleanUrl = urlParts[0];
+      const ext = cleanUrl.split(".").pop() || "png";
       const fileName = `${datePart}_${timePart}_output_${colorPart}.${ext}`;
 
-      // 백엔드 다운로드 엔드포인트로 요청 (Content-Disposition 으로 강제 다운로드)
+      // 백엔드 다운로드 엔드포인트로부터 Blob을 받아와서, 새 탭 이동 없이 저장
       const downloadUrlApi = `${API_BASE_URL}/api/download_image?path=${encodeURIComponent(targetUrl)}&filename=${encodeURIComponent(
         fileName
       )}`;
 
+      const response = await fetch(downloadUrlApi, { method: "GET" });
+      if (!response.ok) {
+        throw new Error(`다운로드 실패: ${response.status}`);
+      }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+
       const link = document.createElement("a");
-      link.href = downloadUrlApi;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
+      link.href = objectUrl;
+      link.download = fileName;
 
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+
+      URL.revokeObjectURL(objectUrl);
     } catch (e) {
       console.error("결과 이미지 저장 중 오류:", e);
     }

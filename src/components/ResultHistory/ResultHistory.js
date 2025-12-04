@@ -1,13 +1,20 @@
 import React from "react";
 
-const ResultHistory = ({ history, activeId, onSelect }) => {
+const ResultHistory = ({ history, activeId, onSelect, onRemove, onClearAll }) => {
   const items = history || [];
 
   return (
     <div className="result-history-card">
       <div className="result-history-header">
         <div className="result-history-title">결과 히스토리</div>
-        <div className="result-history-count">{items.length}</div>
+        <div className="result-history-header-right">
+          <div className="result-history-count">{items.length}</div>
+          {items.length > 0 && (
+            <button type="button" className="result-history-clear-all" onClick={onClearAll}>
+              전체 삭제
+            </button>
+          )}
+        </div>
       </div>
       <div className="result-history-list">
         {items.length === 0 ? (
@@ -20,7 +27,8 @@ const ResultHistory = ({ history, activeId, onSelect }) => {
           </div>
         ) : (
           items.map((entry) => {
-            const thumbSrc = entry.resultUrl || entry.previewUrl;
+            // 우선순위: 합성 프리뷰(입력+조명) > 결과 이미지
+            const thumbSrc = entry.previewUrl || entry.resultUrl;
             const date = new Date(entry.createdAt);
             const timeLabel = date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
             const isActive = activeId === entry.id;
@@ -42,6 +50,18 @@ const ResultHistory = ({ history, activeId, onSelect }) => {
                 <div className="result-history-meta">
                   <div className="result-history-meta-top">
                     <span className="result-history-time">{timeLabel}</span>
+                    {onRemove && (
+                      <button
+                        type="button"
+                        className="result-history-delete"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemove(entry.id);
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
                   {entry.message && <div className="result-history-message">{entry.message}</div>}
                 </div>

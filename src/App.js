@@ -53,6 +53,8 @@ function App() {
     resetProcessingStatus,
     history,
     setActiveResultColor,
+    clearHistory,
+    removeHistoryEntry,
   } = useImageGeneration();
 
   // 이미지 업로드 핸들러 (업로드 또는 교체 시 공통 사용)
@@ -61,6 +63,9 @@ function App() {
       setUploadedFile(file);
       resetLights();
       resetProcessingStatus();
+      // 새 세션 시작 시에는 현재 화면을 히스토리와 분리
+      setActiveHistoryId(null);
+      setSelectedColorKey("white");
     },
     [resetLights, resetProcessingStatus]
   );
@@ -153,6 +158,8 @@ function App() {
     setUploadedFile(null);
     resetLights();
     resetProcessingStatus();
+    setActiveHistoryId(null);
+    setSelectedColorKey("white");
   }, [resetLights, resetProcessingStatus]);
 
   // 이미지 생성 및 전송 핸들러
@@ -245,34 +252,32 @@ function App() {
     }
   }, [generationMessageType, generationMessage]);
 
-  // 가장 최신 히스토리 항목을 기본 선택
-  useEffect(() => {
-    if (history.length === 0) {
-      if (activeHistoryId) {
-        setActiveHistoryId(null);
-      }
-      return;
-    }
-    const latestEntry = history[0];
-    const latestId = latestEntry.id;
-    if (!activeHistoryId || !history.some((h) => h.id === activeHistoryId)) {
-      setActiveHistoryId(latestId);
-      if (latestEntry.colorKey) {
-        setSelectedColorKey(latestEntry.colorKey);
-        setActiveResultColor(latestEntry.colorKey);
-      }
-    }
-  }, [history, activeHistoryId, setActiveResultColor]);
+  const activeHistoryEntry = activeHistoryId ? history.find((h) => h.id === activeHistoryId) || null : null;
+  const viewingHistory = !!activeHistoryEntry;
 
-  const activeHistoryEntry = history.find((h) => h.id === activeHistoryId) || null;
-  const effectivePreviewUrl = activeHistoryEntry?.previewUrl || compositedPreviewUrl;
+  // 프리뷰는
+  // - 히스토리 모드: 해당 항목의 previewUrl (인풋 합성 이미지)만 사용
+  // - 일반 모드: 현재 세션의 compositedPreviewUrl
+  const effectivePreviewUrl = viewingHistory ? activeHistoryEntry?.previewUrl || null : compositedPreviewUrl;
 
-  // 현재 선택된 색상의 URL을 우선 사용 (색상별 결과 지원용)
-  const currentColorUrl = (resultImagesByColor && selectedColorKey && resultImagesByColor[selectedColorKey]) || null;
+  // 현재 세션에서 선택된 색상의 URL (multi-color 지원용)
+  const currentColorUrl = !viewingHistory && resultImagesByColor && selectedColorKey ? resultImagesByColor[selectedColorKey] || null : null;
 
-  // 결과 이미지는 (색상별 URL) → (현재 상태) → (히스토리 기본 URL) 순서로 선택
-  const effectiveResultUrl = currentColorUrl || resultImageUrl || activeHistoryEntry?.resultUrl || null;
-  const effectiveViewSize = activeHistoryEntry?.viewSize || generatedViewSize;
+  // 히스토리 모드에서 사용할 색상별 이미지 맵 (없으면 null)
+  const historyImagesByColor = viewingHistory ? activeHistoryEntry?.imagesByColor || null : null;
+
+  // 결과 이미지는
+  // - 히스토리 항목을 보는 경우:
+  //     해당 히스토리의 imagesByColor[selectedColorKey] → colorKey 기본값 → resultUrl
+  // - 아니면: (현재 세션 색상별 URL) → (현재 세션 resultImageUrl)
+  const effectiveResultUrl = viewingHistory
+    ? (historyImagesByColor && selectedColorKey && historyImagesByColor[selectedColorKey]) ||
+      (historyImagesByColor && activeHistoryEntry?.colorKey && historyImagesByColor[activeHistoryEntry.colorKey]) ||
+      activeHistoryEntry?.resultUrl ||
+      null
+    : currentColorUrl || resultImageUrl;
+
+  const effectiveViewSize = viewingHistory ? activeHistoryEntry?.viewSize || generatedViewSize : generatedViewSize;
 
   return (
     <div className={`App ${uploadedFile ? "has-upload" : ""}`}>
@@ -336,7 +341,9 @@ function App() {
             selectedColor={selectedColorKey}
             onColorChange={(colorKey) => {
               setSelectedColorKey(colorKey);
-              setActiveResultColor(colorKey);
+              if (!viewingHistory) {
+                setActiveResultColor(colorKey);
+              }
             }}
             generationMessage={generationMessage}
             generationMessageType={generationMessageType}
@@ -358,8 +365,18 @@ function App() {
                 const entry = history.find((h) => h.id === id);
                 if (entry?.colorKey) {
                   setSelectedColorKey(entry.colorKey);
-                  setActiveResultColor(entry.colorKey);
                 }
+              }}
+              onRemove={(id) => {
+                removeHistoryEntry(id);
+                if (activeHistoryId === id) {
+                  setActiveHistoryId(null);
+                }
+              }}
+              onClearAll={() => {
+                clearHistory();
+                setActiveHistoryId(null);
+                setSelectedColorKey("white");
               }}
             />
           </div>

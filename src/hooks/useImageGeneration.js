@@ -17,6 +17,7 @@ export const useImageGeneration = () => {
   const [generationMessage, setGenerationMessage] = useState(null);
   const [generationMessageType, setGenerationMessageType] = useState(null); // "info" | "success" | "error"
   const [history, setHistory] = useState([]);
+  const [jobPreviewMap, setJobPreviewMap] = useState({});
 
   const HISTORY_STORAGE_KEY = "lumiply:history";
 
@@ -44,17 +45,24 @@ export const useImageGeneration = () => {
         const blob = await compositeImage(roomImage, lights, displaySize);
 
         // 결과 비교 화면에서 참고용으로 원본 해상도 저장
-        setGeneratedViewSize({ width: roomImage.width, height: roomImage.height });
+        const viewSize = { width: roomImage.width, height: roomImage.height };
+        setGeneratedViewSize(viewSize);
 
         // 클라이언트에서 합성된 미리보기 URL 생성
-        if (compositedPreviewUrl) {
-          URL.revokeObjectURL(compositedPreviewUrl);
-        }
         const previewUrl = URL.createObjectURL(blob);
         setCompositedPreviewUrl(previewUrl);
 
         // 서버에 업로드
         const { job_id, message } = await uploadImage(blob);
+
+        // 이 작업(job_id)에 해당하는 프리뷰/뷰사이즈를 기록 (히스토리용)
+        setJobPreviewMap((prev) => ({
+          ...prev,
+          [job_id]: {
+            previewUrl,
+            viewSize,
+          },
+        }));
 
         // URL 정리
         URL.revokeObjectURL(roomImageUrl);
@@ -65,7 +73,7 @@ export const useImageGeneration = () => {
         throw error;
       }
     },
-    [compositedPreviewUrl]
+    []
   );
 
   /**
@@ -93,6 +101,7 @@ export const useImageGeneration = () => {
         // 완료 시 결과 이미지 URL 저장
         const result = status?.result || {};
         const colorImages = result.images;
+        const inputImageUrl = result.input_image_url;
         let primaryUrl = null;
         let primaryColorKey = "white";
 
@@ -141,15 +150,48 @@ export const useImageGeneration = () => {
         } else {
           setResultImageUrl(null);
         }
+        // 입력 합성 이미지는 서버에서 전달된 input_image_url 을 우선 사용 (없으면 기존 프리뷰 사용)
+        let inputAbs = null;
+        if (inputImageUrl) {
+          const strInput = String(inputImageUrl);
+          inputAbs =
+            strInput.startsWith("http://") || strInput.startsWith("https://")
+              ? strInput
+              : `${API_BASE_URL}${strInput}`;
+        }
+        if (inputAbs) {
+          setCompositedPreviewUrl(inputAbs);
+        }
+
+        const jobPreview = jobPreviewMap[jobId];
+        const previewForHistory = inputAbs || jobPreview?.previewUrl || compositedPreviewUrl;
+        const viewSizeForHistory = jobPreview?.viewSize || generatedViewSize;
+
         // 히스토리에 추가 (가장 최신 항목이 위로 오도록)
         setHistory((prev) => [
           {
             id: jobId,
             createdAt: Date.now(),
-            previewUrl: compositedPreviewUrl,
+            previewUrl: previewForHistory,
             resultUrl: primaryUrl,
+            // 색상별 절대 URL 맵을 함께 저장 (히스토리에서 팔레트로 색 전환 가능)
+            imagesByColor:
+              colorImages && typeof colorImages === "object"
+                ? Object.fromEntries(
+                    Object.entries(colorImages)
+                      .filter(([, url]) => !!url)
+                      .map(([key, url]) => {
+                        const strUrl = String(url);
+                        const abs =
+                          strUrl.startsWith("http://") || strUrl.startsWith("https://")
+                            ? strUrl
+                            : `${API_BASE_URL}${strUrl}`;
+                        return [key, abs];
+                      })
+                  )
+                : null,
             colorKey: primaryColorKey,
-            viewSize: generatedViewSize,
+            viewSize: viewSizeForHistory,
             message: status?.message || "이미지 생성이 완료되었습니다.",
           },
           ...prev,
@@ -166,7 +208,15 @@ export const useImageGeneration = () => {
         throw error;
       }
     );
-  }, [compositedPreviewUrl, generatedViewSize]);
+
+    // 이 작업에 대한 프리뷰 캐시는 더 이상 필요 없으므로 정리
+    setJobPreviewMap((prev) => {
+      if (!prev[jobId]) return prev;
+      const next = { ...prev };
+      delete next[jobId];
+      return next;
+    });
+  }, [jobPreviewMap, generatedViewSize, compositedPreviewUrl]);
 
   /**
    * 처리 상태 초기화
@@ -174,9 +224,6 @@ export const useImageGeneration = () => {
   const resetProcessingStatus = useCallback(() => {
     setProcessingStatus(null);
     setCurrentJobId(null);
-    if (compositedPreviewUrl) {
-      URL.revokeObjectURL(compositedPreviewUrl);
-    }
     setCompositedPreviewUrl(null);
     setGeneratedViewSize(null);
     setResultImageUrl(null);
@@ -208,13 +255,23 @@ export const useImageGeneration = () => {
       if (!raw) return;
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        // 저장된 데이터에는 previewUrl 이 없을 수 있음
+        // 이전 세션에서 저장된, 형식이 맞지 않는 오래된 항목들은 제거
+        const sanitized = parsed.filter(
+          (entry) =>
+            entry &&
+            typeof entry === "object" &&
+            entry.resultUrl &&
+            entry.imagesByColor &&
+            typeof entry.imagesByColor === "object"
+        );
+
         setHistory(
-          parsed.map((entry) => ({
+          sanitized.map((entry) => ({
             id: entry.id,
             createdAt: entry.createdAt,
             previewUrl: entry.previewUrl || null,
             resultUrl: entry.resultUrl || null,
+            imagesByColor: entry.imagesByColor || null,
             colorKey: entry.colorKey || "white",
             viewSize: entry.viewSize || null,
             message: entry.message || "",
@@ -235,7 +292,9 @@ export const useImageGeneration = () => {
         id: entry.id,
         createdAt: entry.createdAt,
         colorKey: entry.colorKey || "white",
+        previewUrl: entry.previewUrl || null,
         resultUrl: entry.resultUrl,
+        imagesByColor: entry.imagesByColor || null,
         viewSize: entry.viewSize,
         message: entry.message,
       }));
@@ -247,6 +306,16 @@ export const useImageGeneration = () => {
 
   const isProcessing =
     !!processingStatus && (processingStatus.status === "pending" || processingStatus.status === "processing");
+
+  // 히스토리 전체 삭제
+  const clearHistory = useCallback(() => {
+    setHistory([]);
+  }, []);
+
+  // 개별 히스토리 삭제
+  const removeHistoryEntry = useCallback((id) => {
+    setHistory((prev) => prev.filter((entry) => entry.id !== id));
+  }, []);
 
   return {
     processingStatus,
@@ -263,6 +332,8 @@ export const useImageGeneration = () => {
     resetProcessingStatus,
     history,
     setActiveResultColor,
+    clearHistory,
+    removeHistoryEntry,
   };
 };
 
