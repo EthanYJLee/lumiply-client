@@ -1,4 +1,4 @@
-## LumiPly Client (React)
+## Lumiply Client (React)
 
 방 사진에 가상 조명을 올려보고, Colab 모델이 생성한 **7가지 조명 색상 결과**를 비교·저장할 수 있는 React SPA입니다.  
 어떻게 동작하는지 한 번에 이해할 수 있도록 사용 흐름과 내부 구조를 중심으로 정리했습니다.
