@@ -29,8 +29,15 @@ export const drawLightOnCanvas = (ctx, lightImage, light, canvasWidth, canvasHei
   const lightX = (light.position.x / 100) * canvasWidth;
   const lightY = (light.position.y / 100) * canvasHeight;
   const baseSize = DEFAULT_LIGHT_SIZE * (light.scale || 1.0);
-  const lightWidth = baseSize * scaleX;
-  const lightHeight = baseSize * scaleY;
+  // 세로로 긴 이미지에서 scaleX, scaleY 가 달라지면 조명이 가로/세로로 찌그러질 수 있으므로
+  // 하나의 균일 스케일 팩터를 사용해서 비율을 유지한다.
+  //
+  // 에디터에서는 조명 크기가 "이미지 너비 대비" 비율로 느껴지므로,
+  // 원본 해상도에서도 이미지 너비 기준 스케일(scaleX)을 그대로 사용하는 것이 가장 자연스럽다.
+  // (object-fit: contain 으로 표시되면 실제로는 width/height 비율이 동일하므로 scaleX ≈ scaleY)
+  const uniformScale = scaleX || scaleY || 1;
+  const lightWidth = baseSize * uniformScale;
+  const lightHeight = baseSize * uniformScale;
 
   ctx.save();
 
@@ -66,9 +73,18 @@ export const compositeImage = async (roomImage, lights, displaySize) => {
   // 방 이미지 그리기 (원본 해상도)
   ctx.drawImage(roomImage, 0, 0, width, height);
 
-  // 화면에 표시된 이미지 크기와 원본 해상도의 비율 계산
-  const scaleX = displaySize?.width ? width / displaySize.width : 1;
-  const scaleY = displaySize?.height ? height / displaySize.height : 1;
+  // 화면에 표시된 이미지(실제 그려진 영역)의 크기와 원본 해상도의 비율 계산
+  // App 쪽에서 object-fit: contain 결과인 "drawnW/drawnH" 를 displaySize 로 넘겨주므로
+  // 여기서는 단순히 원본 → 화면 비율의 역수만 사용하면 된다.
+  let scaleX = 1;
+  let scaleY = 1;
+
+  if (displaySize?.width) {
+    scaleX = width / displaySize.width;
+  }
+  if (displaySize?.height) {
+    scaleY = height / displaySize.height;
+  }
 
   // 각 조명 이미지 로드 및 그리기
   for (const light of lights) {

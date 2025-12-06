@@ -170,25 +170,34 @@ function App() {
     }
 
     try {
-      const imageRect = mainImageRef.current?.getBoundingClientRect();
       const containerRect = imageContainerRef.current?.getBoundingClientRect();
+      const imageEl = mainImageRef.current;
 
       let lightsForComposite = lights;
-      if (imageRect && containerRect) {
-        const offsetLeft = imageRect.left - containerRect.left;
-        const offsetTop = imageRect.top - containerRect.top;
+      let displaySize;
+
+      if (containerRect && imageEl && imageEl.naturalWidth && imageEl.naturalHeight) {
+        const naturalW = imageEl.naturalWidth;
+        const naturalH = imageEl.naturalHeight;
+
+        // object-fit: contain 에서 실제 그려지는 이미지 크기와 위치를 직접 계산
+        const scaleToFit = Math.min(containerRect.width / naturalW, containerRect.height / naturalH);
+        const drawnW = naturalW * scaleToFit;
+        const drawnH = naturalH * scaleToFit;
+        const imageLeft = (containerRect.width - drawnW) / 2;
+        const imageTop = (containerRect.height - drawnH) / 2;
 
         lightsForComposite = lights.map((light) => {
-          // 현재 light.position 은 컨테이너 기준 퍼센트 값
+          // 현재 light.position 은 컨테이너 기준 퍼센트 값 (센터 좌표)
           const xInContainerPx = (light.position.x / 100) * containerRect.width;
           const yInContainerPx = (light.position.y / 100) * containerRect.height;
 
-          // 이미지 내부 좌표(px)로 변환
-          const xInImagePx = xInContainerPx - offsetLeft;
-          const yInImagePx = yInContainerPx - offsetTop;
+          // 이미지 영역 내부 좌표(px)로 변환
+          const xInImagePx = xInContainerPx - imageLeft;
+          const yInImagePx = yInContainerPx - imageTop;
 
-          const xImagePercent = (xInImagePx / imageRect.width) * 100;
-          const yImagePercent = (yInImagePx / imageRect.height) * 100;
+          const xImagePercent = (xInImagePx / drawnW) * 100;
+          const yImagePercent = (yInImagePx / drawnH) * 100;
 
           return {
             ...light,
@@ -198,9 +207,11 @@ function App() {
             },
           };
         });
-      }
 
-      const displaySize = imageRect ? { width: Math.round(imageRect.width), height: Math.round(imageRect.height) } : undefined;
+        displaySize = { width: Math.round(drawnW), height: Math.round(drawnH) };
+      } else {
+        displaySize = undefined;
+      }
 
       const { job_id, message } = await generateAndUpload(uploadedFile, lightsForComposite, displaySize);
       // alert(message || "이미지 업로드 완료. 처리 중입니다.");

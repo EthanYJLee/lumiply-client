@@ -25,198 +25,202 @@ export const useImageGeneration = () => {
    * 이미지 생성 및 서버 전송
    * - 합성 결과는 항상 업로드한 원본 이미지와 동일한 해상도로 생성
    */
-  const generateAndUpload = useCallback(
-    async (uploadedFile, lights, displaySize) => {
-      if (!uploadedFile || lights.length === 0) {
-        throw new Error("이미지와 조명을 모두 선택해주세요.");
-      }
+  const generateAndUpload = useCallback(async (uploadedFile, lights, displaySize) => {
+    if (!uploadedFile || lights.length === 0) {
+      throw new Error("이미지와 조명을 모두 선택해주세요.");
+    }
 
-      try {
-        // 방 이미지 로드
-        const roomImageUrl = URL.createObjectURL(uploadedFile);
-        const roomImage = await new Promise((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => resolve(img);
-          img.onerror = reject;
-          img.src = roomImageUrl;
-        });
+    try {
+      // 방 이미지 로드
+      const roomImageUrl = URL.createObjectURL(uploadedFile);
+      const roomImage = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = roomImageUrl;
+      });
 
-        // 이미지 합성
-        const blob = await compositeImage(roomImage, lights, displaySize);
+      // 이미지 합성
+      const blob = await compositeImage(roomImage, lights, displaySize);
 
-        // 결과 비교 화면에서 참고용으로 원본 해상도 저장
-        const viewSize = { width: roomImage.width, height: roomImage.height };
-        setGeneratedViewSize(viewSize);
+      // 결과 비교 화면에서 참고용으로 원본 해상도 저장
+      const viewSize = { width: roomImage.width, height: roomImage.height };
+      setGeneratedViewSize(viewSize);
 
-        // 클라이언트에서 합성된 미리보기 URL 생성
-        const previewUrl = URL.createObjectURL(blob);
-        setCompositedPreviewUrl(previewUrl);
+      // 클라이언트에서 합성된 미리보기 URL 생성
+      const previewUrl = URL.createObjectURL(blob);
+      setCompositedPreviewUrl(previewUrl);
 
-        // 서버에 업로드
-        const { job_id, message } = await uploadImage(blob);
+      // 서버에 업로드
+      const { job_id, message } = await uploadImage(blob);
 
-        // 이 작업(job_id)에 해당하는 프리뷰/뷰사이즈를 기록 (히스토리용)
-        setJobPreviewMap((prev) => ({
-          ...prev,
-          [job_id]: {
-            previewUrl,
-            viewSize,
-          },
-        }));
+      // 이 작업(job_id)에 해당하는 프리뷰/뷰사이즈를 기록 (히스토리용)
+      setJobPreviewMap((prev) => ({
+        ...prev,
+        [job_id]: {
+          previewUrl,
+          viewSize,
+        },
+      }));
 
-        // URL 정리
-        URL.revokeObjectURL(roomImageUrl);
+      // URL 정리
+      URL.revokeObjectURL(roomImageUrl);
 
-        return { job_id, message };
-      } catch (error) {
-        console.error("이미지 생성 오류:", error);
-        throw error;
-      }
-    },
-    []
-  );
+      return { job_id, message };
+    } catch (error) {
+      console.error("이미지 생성 오류:", error);
+      throw error;
+    }
+  }, []);
 
   /**
    * 작업 상태 폴링 시작
    */
-  const startJobPolling = useCallback((jobId) => {
-    setCurrentJobId(jobId);
-    setProcessingStatus({ status: "pending", progress: 0, message: "작업이 대기 중입니다." });
-    setGenerationMessage("이미지 생성 작업을 시작했습니다.");
-    setGenerationMessageType("info");
+  const startJobPolling = useCallback(
+    (jobId) => {
+      setCurrentJobId(jobId);
+      setProcessingStatus({ status: "pending", progress: 0, message: "작업이 대기 중입니다." });
+      setGenerationMessage("이미지 생성 작업을 시작했습니다.");
+      setGenerationMessageType("info");
 
-    pollJobStatus(
-      jobId,
-      (status) => {
-        setProcessingStatus(status);
-        if (status?.message) {
-          setGenerationMessage(status.message);
-          setGenerationMessageType("info");
-        }
-        console.log(`작업 상태 [${status.status}]: ${status.message || ""} (${status.progress || 0}%)`);
-      },
-      (status) => {
-        setProcessingStatus(null);
-        setCurrentJobId(null);
-        // 완료 시 결과 이미지 URL 저장
-        const result = status?.result || {};
-        const colorImages = result.images;
-        const inputImageUrl = result.input_image_url;
-        let primaryUrl = null;
-        let primaryColorKey = "white";
+      pollJobStatus(
+        jobId,
+        (status) => {
+          setProcessingStatus(status);
+          if (status?.message) {
+            setGenerationMessage(status.message);
+            setGenerationMessageType("info");
+          }
+          console.log(`작업 상태 [${status.status}]: ${status.message || ""} (${status.progress || 0}%)`);
+        },
+        (status) => {
+          setProcessingStatus(null);
+          setCurrentJobId(null);
+          // 완료 시 결과 이미지 URL 저장
+          const result = status?.result || {};
+          const colorImages = result.images;
+          const inputImageUrl = result.input_image_url;
+          let primaryUrl = null;
+          let primaryColorKey = "white";
 
-        if (colorImages && typeof colorImages === "object") {
-          // 색상별 이미지가 온 경우: 각 URL 을 절대 경로로 변환
-          const mapped = {};
-          Object.entries(colorImages).forEach(([key, url]) => {
-            if (!url) return;
-            const strUrl = String(url);
-            const abs =
-              strUrl.startsWith("http://") || strUrl.startsWith("https://")
-                ? strUrl
-                : `${API_BASE_URL}${strUrl}`;
-            mapped[key] = abs;
-          });
-          setResultImagesByColor(Object.keys(mapped).length > 0 ? mapped : null);
+          if (colorImages && typeof colorImages === "object") {
+            // 색상별 이미지가 온 경우: 각 URL 을 절대 경로로 변환
+            const mapped = {};
+            Object.entries(colorImages).forEach(([key, url]) => {
+              if (!url) return;
+              const strUrl = String(url);
+              const abs = strUrl.startsWith("http://") || strUrl.startsWith("https://") ? strUrl : `${API_BASE_URL}${strUrl}`;
+              mapped[key] = abs;
+            });
 
-          if (mapped.white) {
-            primaryColorKey = "white";
-            primaryUrl = mapped.white;
-          } else {
-            const keys = Object.keys(mapped);
-            const firstKey = keys[0];
-            if (firstKey) {
-              primaryColorKey = firstKey;
-              primaryUrl = mapped[firstKey];
+            const hasAny = Object.keys(mapped).length > 0;
+            setResultImagesByColor(hasAny ? mapped : null);
+
+            // 최초 한 번 색상 전환 시 딜레이를 줄이기 위해
+            // 결과 수신 시점에 색상별 이미지를 브라우저 캐시에 미리 로드
+            if (hasAny && typeof window !== "undefined") {
+              Object.values(mapped).forEach((url) => {
+                if (!url) return;
+                try {
+                  const img = new window.Image();
+                  img.src = url;
+                } catch {
+                  // SSR 환경 등에서 Image 생성이 실패해도 전체 흐름에는 영향 없음
+                }
+              });
+            }
+
+            if (mapped.white) {
+              primaryColorKey = "white";
+              primaryUrl = mapped.white;
             } else {
-              primaryUrl = null;
+              const keys = Object.keys(mapped);
+              const firstKey = keys[0];
+              if (firstKey) {
+                primaryColorKey = firstKey;
+                primaryUrl = mapped[firstKey];
+              } else {
+                primaryUrl = null;
+              }
+            }
+          } else {
+            // 구버전: 단일 image_url 필드 사용
+            const imageUrl = result.image_url;
+            if (imageUrl) {
+              const abs = imageUrl.startsWith("http://") || imageUrl.startsWith("https://") ? imageUrl : `${API_BASE_URL}${imageUrl}`;
+              primaryUrl = abs;
+              primaryColorKey = "white";
             }
           }
-        } else {
-          // 구버전: 단일 image_url 필드 사용
-          const imageUrl = result.image_url;
-          if (imageUrl) {
-            const abs =
-              imageUrl.startsWith("http://") || imageUrl.startsWith("https://")
-                ? imageUrl
-                : `${API_BASE_URL}${imageUrl}`;
-            primaryUrl = abs;
-            primaryColorKey = "white";
+
+          if (primaryUrl) {
+            setResultImageUrl(primaryUrl);
+          } else {
+            setResultImageUrl(null);
           }
-        }
+          // 입력 합성 이미지는 서버에서 전달된 input_image_url 을 우선 사용 (없으면 기존 프리뷰 사용)
+          let inputAbs = null;
+          if (inputImageUrl) {
+            const strInput = String(inputImageUrl);
+            inputAbs = strInput.startsWith("http://") || strInput.startsWith("https://") ? strInput : `${API_BASE_URL}${strInput}`;
+          }
+          if (inputAbs) {
+            setCompositedPreviewUrl(inputAbs);
+          }
 
-        if (primaryUrl) {
-          setResultImageUrl(primaryUrl);
-        } else {
-          setResultImageUrl(null);
-        }
-        // 입력 합성 이미지는 서버에서 전달된 input_image_url 을 우선 사용 (없으면 기존 프리뷰 사용)
-        let inputAbs = null;
-        if (inputImageUrl) {
-          const strInput = String(inputImageUrl);
-          inputAbs =
-            strInput.startsWith("http://") || strInput.startsWith("https://")
-              ? strInput
-              : `${API_BASE_URL}${strInput}`;
-        }
-        if (inputAbs) {
-          setCompositedPreviewUrl(inputAbs);
-        }
+          const jobPreview = jobPreviewMap[jobId];
+          const previewForHistory = inputAbs || jobPreview?.previewUrl || compositedPreviewUrl;
+          const viewSizeForHistory = jobPreview?.viewSize || generatedViewSize;
 
-        const jobPreview = jobPreviewMap[jobId];
-        const previewForHistory = inputAbs || jobPreview?.previewUrl || compositedPreviewUrl;
-        const viewSizeForHistory = jobPreview?.viewSize || generatedViewSize;
+          // 히스토리에 추가 (가장 최신 항목이 위로 오도록)
+          setHistory((prev) => [
+            {
+              id: jobId,
+              createdAt: Date.now(),
+              previewUrl: previewForHistory,
+              resultUrl: primaryUrl,
+              // 색상별 절대 URL 맵을 함께 저장 (히스토리에서 팔레트로 색 전환 가능)
+              imagesByColor:
+                colorImages && typeof colorImages === "object"
+                  ? Object.fromEntries(
+                      Object.entries(colorImages)
+                        .filter(([, url]) => !!url)
+                        .map(([key, url]) => {
+                          const strUrl = String(url);
+                          const abs = strUrl.startsWith("http://") || strUrl.startsWith("https://") ? strUrl : `${API_BASE_URL}${strUrl}`;
+                          return [key, abs];
+                        })
+                    )
+                  : null,
+              colorKey: primaryColorKey,
+              viewSize: viewSizeForHistory,
+              message: status?.message || "이미지 생성이 완료되었습니다.",
+            },
+            ...prev,
+          ]);
+          setGenerationMessage(status?.message || "이미지 생성이 완료되었습니다.");
+          setGenerationMessageType("success");
+          return status;
+        },
+        (error) => {
+          setProcessingStatus(null);
+          setCurrentJobId(null);
+          setGenerationMessage(error.message || "이미지 생성 중 오류가 발생했습니다.");
+          setGenerationMessageType("error");
+          throw error;
+        }
+      );
 
-        // 히스토리에 추가 (가장 최신 항목이 위로 오도록)
-        setHistory((prev) => [
-          {
-            id: jobId,
-            createdAt: Date.now(),
-            previewUrl: previewForHistory,
-            resultUrl: primaryUrl,
-            // 색상별 절대 URL 맵을 함께 저장 (히스토리에서 팔레트로 색 전환 가능)
-            imagesByColor:
-              colorImages && typeof colorImages === "object"
-                ? Object.fromEntries(
-                    Object.entries(colorImages)
-                      .filter(([, url]) => !!url)
-                      .map(([key, url]) => {
-                        const strUrl = String(url);
-                        const abs =
-                          strUrl.startsWith("http://") || strUrl.startsWith("https://")
-                            ? strUrl
-                            : `${API_BASE_URL}${strUrl}`;
-                        return [key, abs];
-                      })
-                  )
-                : null,
-            colorKey: primaryColorKey,
-            viewSize: viewSizeForHistory,
-            message: status?.message || "이미지 생성이 완료되었습니다.",
-          },
-          ...prev,
-        ]);
-        setGenerationMessage(status?.message || "이미지 생성이 완료되었습니다.");
-        setGenerationMessageType("success");
-        return status;
-      },
-      (error) => {
-        setProcessingStatus(null);
-        setCurrentJobId(null);
-        setGenerationMessage(error.message || "이미지 생성 중 오류가 발생했습니다.");
-        setGenerationMessageType("error");
-        throw error;
-      }
-    );
-
-    // 이 작업에 대한 프리뷰 캐시는 더 이상 필요 없으므로 정리
-    setJobPreviewMap((prev) => {
-      if (!prev[jobId]) return prev;
-      const next = { ...prev };
-      delete next[jobId];
-      return next;
-    });
-  }, [jobPreviewMap, generatedViewSize, compositedPreviewUrl]);
+      // 이 작업에 대한 프리뷰 캐시는 더 이상 필요 없으므로 정리
+      setJobPreviewMap((prev) => {
+        if (!prev[jobId]) return prev;
+        const next = { ...prev };
+        delete next[jobId];
+        return next;
+      });
+    },
+    [jobPreviewMap, generatedViewSize, compositedPreviewUrl]
+  );
 
   /**
    * 처리 상태 초기화
@@ -257,12 +261,7 @@ export const useImageGeneration = () => {
       if (Array.isArray(parsed)) {
         // 이전 세션에서 저장된, 형식이 맞지 않는 오래된 항목들은 제거
         const sanitized = parsed.filter(
-          (entry) =>
-            entry &&
-            typeof entry === "object" &&
-            entry.resultUrl &&
-            entry.imagesByColor &&
-            typeof entry.imagesByColor === "object"
+          (entry) => entry && typeof entry === "object" && entry.resultUrl && entry.imagesByColor && typeof entry.imagesByColor === "object"
         );
 
         setHistory(
@@ -304,8 +303,7 @@ export const useImageGeneration = () => {
     }
   }, [history, HISTORY_STORAGE_KEY]);
 
-  const isProcessing =
-    !!processingStatus && (processingStatus.status === "pending" || processingStatus.status === "processing");
+  const isProcessing = !!processingStatus && (processingStatus.status === "pending" || processingStatus.status === "processing");
 
   // 히스토리 전체 삭제
   const clearHistory = useCallback(() => {
@@ -336,4 +334,3 @@ export const useImageGeneration = () => {
     removeHistoryEntry,
   };
 };
-
