@@ -1,5 +1,4 @@
 import React from "react";
-import Logo from "../Logo";
 
 /**
  * 이미지 업로드 영역 컴포넌트
@@ -7,9 +6,6 @@ import Logo from "../Logo";
 const UploadZone = ({ getRootProps, getInputProps, isDragActive }) => {
   return (
     <div className="upload-container">
-      <div className="logo-header">
-        <Logo size="large" />
-      </div>
       <div {...getRootProps()} className={`upload-zone ${isDragActive ? "drag-active" : ""}`}>
         <input {...getInputProps()} />
         <div className="upload-content">

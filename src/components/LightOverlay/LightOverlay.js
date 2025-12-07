@@ -42,6 +42,7 @@ const LightOverlay = ({
       <img
         src={light.lightPath}
         alt="Light"
+        draggable={false}
         className="light-image"
         style={{
           transform: `scale(${light.scale || 1.0})`,

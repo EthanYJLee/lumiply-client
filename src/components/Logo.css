@@ -15,7 +15,10 @@
 }
 
 .logo-default {
-  /* 기본 스타일 */
+  /* 기본 스타일: 어떤 컨테이너 안에서도 수평 중앙 정렬 */
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .logo-light {
@@ -38,4 +41,3 @@
 .logo-minimal rect {
   filter: none;
 }
-

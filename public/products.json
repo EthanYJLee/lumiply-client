@@ -1,0 +1,26 @@
+[
+  {
+    "file": "options/0.png",
+    "name": "DEJSA Table lamp",
+    "brand": "IKEA",
+    "color": "beige/opal white",
+    "price": "59,900",
+    "link": "https://www.ikea.com/kr/en/p/dejsa-table-lamp-beige-opal-white-glass-20404991/"
+  },
+  {
+    "file": "options/1.png",
+    "name": "Vintage Weaving Lighting Restaurant Chandelier",
+    "brand": "COCOL",
+    "color": "Beige",
+    "price": "145,396",
+    "link": "https://www.amazon.co.uk/Vintage-Weaving-Lighting-Restaurant-Chandelier/dp/B09B1N9SF9?th=1"
+  },
+  {
+    "file": "options/2.png",
+    "name": "ÅRSTID Floor lamp",
+    "brand": "IKEA",
+    "color": "Nickel-plated white",
+    "price": "49,900",
+    "link": "https://www.ikea.com/kr/en/p/arstid-floor-lamp-nickel-plated-white-10284036/"
+  }
+]

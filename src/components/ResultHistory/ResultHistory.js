@@ -34,11 +34,18 @@ const ResultHistory = ({ history, activeId, onSelect, onRemove, onClearAll }) =>
             const isActive = activeId === entry.id;
 
             return (
-              <button
+              <div
                 key={entry.id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 className={`result-history-item ${isActive ? "result-history-item-active" : ""}`}
                 onClick={() => onSelect && onSelect(entry.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onSelect && onSelect(entry.id);
+                  }
+                }}
               >
                 <div className="result-history-thumb-wrapper">
                   {thumbSrc ? (
@@ -65,7 +72,7 @@ const ResultHistory = ({ history, activeId, onSelect, onRemove, onClearAll }) =>
                   </div>
                   {entry.message && <div className="result-history-message">{entry.message}</div>}
                 </div>
-              </button>
+              </div>
             );
           })
         )}

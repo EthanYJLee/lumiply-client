@@ -14,54 +14,22 @@ const Logo = ({ size = "medium", variant = "default" }) => {
     <svg
       width={width}
       height={height}
-      viewBox="0 0 220 60"
+      /* 내부 아이콘 + 텍스트 묶음이 실제로 수평 중앙에 오도록 viewBox의 min-x를 살짝 음수로 조정 */
+      viewBox="0 0 210 55"
       xmlns="http://www.w3.org/2000/svg"
       className={`logo logo-${variant}`}
       style={{ overflow: "visible" }}
     >
       <defs>
+        {/* Cloud Dancer(#f1f0ec)를 중심으로 한 따뜻한 뉴트럴-로즈 그라디언트 */}
         <linearGradient id="glowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" style={{ stopColor: "#ffffff", stopOpacity: 1 }} />
-          <stop offset="2.5%" style={{ stopColor: "#fefeff", stopOpacity: 0.995 }} />
-          <stop offset="5%" style={{ stopColor: "#fdfdfe", stopOpacity: 0.99 }} />
-          <stop offset="7.5%" style={{ stopColor: "#fcfcfe", stopOpacity: 0.985 }} />
-          <stop offset="10%" style={{ stopColor: "#fafbff", stopOpacity: 0.98 }} />
-          <stop offset="12.5%" style={{ stopColor: "#f9faff", stopOpacity: 0.975 }} />
-          <stop offset="15%" style={{ stopColor: "#f7f9ff", stopOpacity: 0.97 }} />
-          <stop offset="17.5%" style={{ stopColor: "#f6f8ff", stopOpacity: 0.965 }} />
-          <stop offset="20%" style={{ stopColor: "#f5f7ff", stopOpacity: 0.96 }} />
-          <stop offset="22.5%" style={{ stopColor: "#f3f6ff", stopOpacity: 0.955 }} />
-          <stop offset="25%" style={{ stopColor: "#f2f5ff", stopOpacity: 0.95 }} />
-          <stop offset="27.5%" style={{ stopColor: "#f1f4ff", stopOpacity: 0.945 }} />
-          <stop offset="30%" style={{ stopColor: "#f0f3ff", stopOpacity: 0.94 }} />
-          <stop offset="32.5%" style={{ stopColor: "#eef2ff", stopOpacity: 0.935 }} />
-          <stop offset="35%" style={{ stopColor: "#edf1ff", stopOpacity: 0.93 }} />
-          <stop offset="37.5%" style={{ stopColor: "#ebefff", stopOpacity: 0.925 }} />
-          <stop offset="40%" style={{ stopColor: "#e8ecff", stopOpacity: 0.91 }} />
-          <stop offset="42.5%" style={{ stopColor: "#e6eaff", stopOpacity: 0.905 }} />
-          <stop offset="45%" style={{ stopColor: "#e4e9ff", stopOpacity: 0.9 }} />
-          <stop offset="47.5%" style={{ stopColor: "#e2e8ff", stopOpacity: 0.895 }} />
-          <stop offset="50%" style={{ stopColor: "#e0e7ff", stopOpacity: 0.88 }} />
-          <stop offset="52.5%" style={{ stopColor: "#dde5ff", stopOpacity: 0.875 }} />
-          <stop offset="55%" style={{ stopColor: "#dae3ff", stopOpacity: 0.87 }} />
-          <stop offset="57.5%" style={{ stopColor: "#d8e1ff", stopOpacity: 0.865 }} />
-          <stop offset="60%" style={{ stopColor: "#d6deff", stopOpacity: 0.85 }} />
-          <stop offset="62.5%" style={{ stopColor: "#d3dcfe", stopOpacity: 0.845 }} />
-          <stop offset="65%" style={{ stopColor: "#d0d9fe", stopOpacity: 0.84 }} />
-          <stop offset="67.5%" style={{ stopColor: "#ced7fe", stopOpacity: 0.835 }} />
-          <stop offset="70%" style={{ stopColor: "#cbd5fe", stopOpacity: 0.82 }} />
-          <stop offset="72.5%" style={{ stopColor: "#c7d2fe", stopOpacity: 0.815 }} />
-          <stop offset="75%" style={{ stopColor: "#c4d0fe", stopOpacity: 0.81 }} />
-          <stop offset="77.5%" style={{ stopColor: "#c0cdfe", stopOpacity: 0.805 }} />
-          <stop offset="80%" style={{ stopColor: "#bcc9fe", stopOpacity: 0.78 }} />
-          <stop offset="82.5%" style={{ stopColor: "#b6c5fd", stopOpacity: 0.775 }} />
-          <stop offset="85%" style={{ stopColor: "#b0c1fd", stopOpacity: 0.77 }} />
-          <stop offset="87.5%" style={{ stopColor: "#aabdfd", stopOpacity: 0.765 }} />
-          <stop offset="90%" style={{ stopColor: "#a8b9fd", stopOpacity: 0.73 }} />
-          <stop offset="92.5%" style={{ stopColor: "#9db0fc", stopOpacity: 0.72 }} />
-          <stop offset="95%" style={{ stopColor: "#8fa5fb", stopOpacity: 0.71 }} />
-          <stop offset="97.5%" style={{ stopColor: "#7a94f9", stopOpacity: 0.695 }} />
-          <stop offset="100%" style={{ stopColor: "#667eea", stopOpacity: 0.68 }} />
+          <stop offset="10%" style={{ stopColor: "#f7f6f2", stopOpacity: 0.98 }} />
+          <stop offset="25%" style={{ stopColor: "#f1f0ec", stopOpacity: 0.96 }} />
+          <stop offset="45%" style={{ stopColor: "#f4e3d7", stopOpacity: 0.94 }} />
+          <stop offset="65%" style={{ stopColor: "#e6cabb", stopOpacity: 0.9 }} />
+          <stop offset="82%" style={{ stopColor: "#cfa58b", stopOpacity: 0.85 }} />
+          <stop offset="100%" style={{ stopColor: "#a47864", stopOpacity: 0.8 }} />
         </linearGradient>
         <filter id="glow">
           <feGaussianBlur stdDeviation="3" result="coloredBlur" />
@@ -78,10 +46,10 @@ const Logo = ({ size = "medium", variant = "default" }) => {
       <g transform="translate(5, 5)">
         {Array.from({ length: 10 }, (_, i) => {
           const layerIndex = 9 - i; // 역순으로 그리기 (가장 큰 것부터)
-          const size = 30 - (layerIndex * 1.8); // 30부터 13.8까지
+          const size = 30 - layerIndex * 1.8; // 30부터 13.8까지
           const x = (30 - size) / 2;
-          const opacity = 0.04 + (layerIndex * 0.045); // 0.04부터 0.445까지
-          const rx = 5 - (layerIndex * 0.35); // 5부터 1.85까지
+          const opacity = 0.04 + layerIndex * 0.045; // 0.04부터 0.445까지
+          const rx = 5 - layerIndex * 0.35; // 5부터 1.85까지
           return (
             <rect
               key={i}
@@ -96,15 +64,7 @@ const Logo = ({ size = "medium", variant = "default" }) => {
             />
           );
         })}
-        <rect
-          x="10"
-          y="10"
-          width="26"
-          height="26"
-          rx="4"
-          fill="url(#glowGradient)"
-          filter="url(#glow)"
-        />
+        <rect x="10" y="10" width="26" height="26" rx="4" fill="url(#glowGradient)" filter="url(#glow)" />
       </g>
 
       <text
@@ -113,7 +73,8 @@ const Logo = ({ size = "medium", variant = "default" }) => {
         fontFamily="'Inter', 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif"
         fontSize={fontSize}
         fontWeight="700"
-        fill="#ffffff"
+        /* Cloud Dancer 계열 배경에서도 또렷하게 보이도록 딥 뉴트럴 텍스트 컬러 사용 */
+        fill="#2b2622"
         letterSpacing="-0.8"
       >
         Lumiply
@@ -136,4 +97,3 @@ const Logo = ({ size = "medium", variant = "default" }) => {
 };
 
 export default Logo;
-
