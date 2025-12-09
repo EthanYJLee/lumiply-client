@@ -1,6 +1,6 @@
 ## Lumiply Client (React)
 
-![cover](public/lumiply_client_cover.png)
+![demo](public/lumiply_gif_demo.gif)
 
 ## 전체 세팅 순서
 0. 미리 제출한 (전달 드린) 환경 변수 압축 파일을 해제한 뒤 아래 단계에서 필요한 환경 변수 파일들을 준비해주세요. 코랩 환경은 VRAM 11G 이상의 GPU가 필요합니다.
@@ -13,6 +13,8 @@
 7. 로컬 기기에서 [**Lumiply Client**](https://github.com/EthanYJLee/lumiply-client) git을 clone 받습니다 (프로젝트 루트 위치에 **.env.local** 파일이 필요합니다).
 8. **Lumiply Client** 루트 위치에서 의존성을 설치(`npm install`)한 뒤 `npm start`을 실행하여 React를 구동합니다.
 9. 브라우저에서 `http://localhost:3000/` 또는 `http://127.0.0.1:3000/`로 접속하여 서비스를 사용합니다.
+
+![cover](public/lumiply_client_cover.png)
 
 Lumiply 프로젝트의 **프론트엔드(SPA)** 저장소입니다.  
 사용자는 방 사진을 업로드하고, 가상 조명을 배치한 뒤, Colab에서 돌아가는 LumiNet 모델이 생성한 **7가지 조명 색상 결과**를 비교·저장할 수 있습니다.
