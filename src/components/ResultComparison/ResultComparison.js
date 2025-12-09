@@ -9,6 +9,8 @@ const ResultComparison = ({ originalUrl, resultImageUrl }) => {
   const [sliderPosition, setSliderPosition] = useState(50); // 0 ~ 100 (%)
   const containerRef = useRef(null);
   const isDraggingRef = useRef(false);
+  const [originalLoaded, setOriginalLoaded] = useState(false);
+  const [resultLoaded, setResultLoaded] = useState(false);
 
   const updateSliderFromClientX = (clientX) => {
     const container = containerRef.current;
@@ -73,15 +75,33 @@ const ResultComparison = ({ originalUrl, resultImageUrl }) => {
 
   return (
     <div className="comparison-slider-container" ref={containerRef} onMouseDown={handleMouseDown} onTouchStart={handleTouchStart}>
-      <img src={originalUrl} alt="Original" className="comparison-image comparison-image-original" />
+      <img
+        src={originalUrl}
+        alt="Original"
+        className="comparison-image comparison-image-original"
+        onLoad={() => setOriginalLoaded(true)}
+        style={{
+          opacity: originalLoaded ? 1 : 0,
+          transition: "opacity 0.25s ease",
+        }}
+      />
       <img
         src={resultImageUrl}
         alt="Result"
         className="comparison-image comparison-image-result"
+        onLoad={() => setResultLoaded(true)}
         style={{
           clipPath: `inset(0 0 0 ${sliderPosition}%)`,
+          opacity: resultLoaded ? 1 : 0,
+          transition: "opacity 0.25s ease",
         }}
       />
+      {(!originalLoaded || !resultLoaded) && (
+        <div className="comparison-loading-overlay">
+          <div className="circular-loader-lg" />
+          <div className="comparison-loading-text">이미지를 불러오는 중입니다...</div>
+        </div>
+      )}
       <div
         className="comparison-slider-handle"
         style={{ left: `${sliderPosition}%` }}

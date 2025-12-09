@@ -22,5 +22,13 @@
     "color": "Nickel-plated white",
     "price": "49,900",
     "link": "https://www.ikea.com/kr/en/p/arstid-floor-lamp-nickel-plated-white-10284036/"
+  },
+  {
+    "file": "options/3.png",
+    "name": "DEJSA Table lamp",
+    "brand": "IKEA",
+    "color": "beige/opal white",
+    "price": "59,900",
+    "link": "https://www.ikea.com/kr/en/p/dejsa-table-lamp-beige-opal-white-glass-20404991/"
   }
 ]

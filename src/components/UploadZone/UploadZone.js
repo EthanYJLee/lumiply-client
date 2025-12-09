@@ -25,9 +25,9 @@ const UploadZone = ({ getRootProps, getInputProps, isDragActive }) => {
           ) : (
             <>
               <p className="upload-text">
-                <span className="upload-highlight">이미지를 클릭</span>하거나
+                <span className="upload-highlight">클릭·드래그</span>를 통해
                 <br />
-                여기로 드래그하세요
+                이미지를 업로드하세요
               </p>
               <p className="upload-hint">PNG, JPG, JPEG, WEBP 지원</p>
             </>

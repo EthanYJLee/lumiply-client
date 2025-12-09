@@ -87,10 +87,57 @@ export const useImageGeneration = () => {
         jobId,
         (status) => {
           setProcessingStatus(status);
+
+          // 서버에서 전달되는 메시지 반영
           if (status?.message) {
             setGenerationMessage(status.message);
             setGenerationMessageType("info");
           }
+
+          // 부분 결과(result.images, result.input_image_url)가 있을 경우 점진적으로 반영
+          const partialResult = status?.result || {};
+          const colorImages = partialResult.images;
+          const inputImageUrl = partialResult.input_image_url;
+
+          if (colorImages && typeof colorImages === "object") {
+            const mapped = {};
+            Object.entries(colorImages).forEach(([key, url]) => {
+              if (!url) return;
+              const strUrl = String(url);
+              const abs = strUrl.startsWith("http://") || strUrl.startsWith("https://") ? strUrl : `${API_BASE_URL}${strUrl}`;
+              mapped[key] = abs;
+            });
+
+            if (Object.keys(mapped).length > 0) {
+              // 기존 값과 병합하여 색상별 결과를 점진적으로 채움
+              setResultImagesByColor((prev) => ({
+                ...(prev || {}),
+                ...mapped,
+              }));
+
+              // 아직 대표 이미지가 없다면, white 또는 첫 번째 색상을 대표 이미지로 설정
+              if (!resultImageUrl) {
+                let primary = mapped.white;
+                if (!primary) {
+                  const keys = Object.keys(mapped);
+                  if (keys.length > 0) {
+                    primary = mapped[keys[0]];
+                  }
+                }
+                if (primary) {
+                  setResultImageUrl(primary);
+                }
+              }
+            }
+          }
+
+          // 입력 합성 이미지 URL 도 부분 결과 시점부터 사용
+          if (inputImageUrl && !compositedPreviewUrl) {
+            const strInput = String(inputImageUrl);
+            const absInput = strInput.startsWith("http://") || strInput.startsWith("https://") ? strInput : `${API_BASE_URL}${strInput}`;
+            setCompositedPreviewUrl(absInput);
+          }
+
           console.log(`작업 상태 [${status.status}]: ${status.message || ""} (${status.progress || 0}%)`);
         },
         (status) => {
@@ -219,7 +266,7 @@ export const useImageGeneration = () => {
         return next;
       });
     },
-    [jobPreviewMap, generatedViewSize, compositedPreviewUrl]
+    [jobPreviewMap, generatedViewSize, resultImageUrl]
   );
 
   /**

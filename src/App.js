@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useNavigate, Navigate } from "react-router-dom";
 import { Alert } from "react-bootstrap";
 import "./App.css";
 
@@ -58,6 +58,7 @@ function AppContent() {
 
   const [activeHistoryId, setActiveHistoryId] = useState(null);
   const [selectedColorKey, setSelectedColorKey] = useState("white");
+  const [hasNavigatedToResult, setHasNavigatedToResult] = useState(false);
 
   // 이미지 업로드 핸들러
   const handleFileUpload = useCallback(
@@ -155,6 +156,7 @@ function AppContent() {
     setActiveHistoryId(null);
     setSelectedColorKey("white");
     setSelectedProductData(null);
+    setHasNavigatedToResult(false);
     navigate("/");
   }, [resetLights, resetProcessingStatus, navigate]);
 
@@ -224,11 +226,14 @@ function AppContent() {
       const { job_id, message } = await generateAndUpload(uploadedFile, lightsForComposite, displaySize);
       console.log(message);
       startJobPolling(job_id);
+      // 결과 생성 시작과 동시에 결과 화면으로 이동
+      navigate("/result", { replace: true });
+      setHasNavigatedToResult(true);
     } catch (error) {
       console.error("이미지 생성 오류:", error);
       alert(`이미지 생성에 실패했습니다: ${error.message}`);
     }
-  }, [uploadedFile, lights, generateAndUpload, startJobPolling, mainImageRef, imageContainerRef]);
+  }, [uploadedFile, lights, generateAndUpload, startJobPolling, mainImageRef, imageContainerRef, navigate]);
 
   const handleLightCarouselSelect = useCallback(
     (lightPath) => {
@@ -268,10 +273,12 @@ function AppContent() {
 
   // 작업 완료 시 /result로 자동 이동 (replace로 히스토리 대체하여 뒤로 가기 시 /로 이동)
   useEffect(() => {
-    if (generationMessageType === "success" && resultImagesByColor) {
+    // 부분 결과라도 첫 번째 색상(주로 white)이 도착하면 결과 화면으로 이동
+    if (!hasNavigatedToResult && resultImagesByColor && Object.keys(resultImagesByColor).length > 0) {
       navigate("/result", { replace: true });
+      setHasNavigatedToResult(true);
     }
-  }, [generationMessageType, resultImagesByColor, navigate]);
+  }, [hasNavigatedToResult, resultImagesByColor, navigate]);
 
   const activeHistoryEntry = activeHistoryId ? history.find((h) => h.id === activeHistoryId) || null : null;
   const viewingHistory = !!activeHistoryEntry;
@@ -323,7 +330,7 @@ function AppContent() {
             <Logo size="medium" variant="dark" />
           </button>
           <div className="app-header-right">
-            <img src="/inisw.png" alt="INISW Academy" className="inisw-header-logo" />
+            <img src="/inisw_png_logo.png" alt="INISW Academy" className="inisw-header-logo" />
           </div>
         </div>
       </header>
@@ -333,33 +340,37 @@ function AppContent() {
         <Route
           path="/arrange"
           element={
-            <ArrangePage
-              uploadedFile={uploadedFile}
-              lights={lights}
-              selectedLightId={selectedLightId}
-              imageContainerRef={imageContainerRef}
-              mainImageRef={mainImageRef}
-              onImageDrop={handleImageDrop}
-              onImageDragOver={handleImageDragOver}
-              onImageClick={handleImageClick}
-              onOverlayMouseDown={handleOverlayMouseDown}
-              onRemoveLight={handleRemoveLight}
-              onResizeStart={handleResizeStart}
-              onImageReplace={handleFileUpload}
-              onGenerate={handleGenerate}
-              processingStatus={processingStatus}
-              isProcessing={isProcessing}
-              onLightSelect={handleLightCarouselSelect}
-              onLightDragStart={handleLightDragStart}
-              setSelectedLightId={setSelectedLightId}
-              history={history}
-              activeHistoryId={activeHistoryId}
-              onHistorySelect={handleHistorySelect}
-              onHistoryRemove={handleHistoryRemove}
-              onHistoryClearAll={handleHistoryClearAll}
-              generationMessage={generationMessage}
-              generationMessageType={generationMessageType}
-            />
+            uploadedFile ? (
+              <ArrangePage
+                uploadedFile={uploadedFile}
+                lights={lights}
+                selectedLightId={selectedLightId}
+                imageContainerRef={imageContainerRef}
+                mainImageRef={mainImageRef}
+                onImageDrop={handleImageDrop}
+                onImageDragOver={handleImageDragOver}
+                onImageClick={handleImageClick}
+                onOverlayMouseDown={handleOverlayMouseDown}
+                onRemoveLight={handleRemoveLight}
+                onResizeStart={handleResizeStart}
+                onImageReplace={handleFileUpload}
+                onGenerate={handleGenerate}
+                processingStatus={processingStatus}
+                isProcessing={isProcessing}
+                onLightSelect={handleLightCarouselSelect}
+                onLightDragStart={handleLightDragStart}
+                setSelectedLightId={setSelectedLightId}
+                history={history}
+                activeHistoryId={activeHistoryId}
+                onHistorySelect={handleHistorySelect}
+                onHistoryRemove={handleHistoryRemove}
+                onHistoryClearAll={handleHistoryClearAll}
+                generationMessage={generationMessage}
+                generationMessageType={generationMessageType}
+              />
+            ) : (
+              <Navigate to="/" replace />
+            )
           }
         />
         <Route
@@ -378,6 +389,8 @@ function AppContent() {
             />
           }
         />
+        {/* 정의되지 않은 모든 경로는 루트로 리다이렉트 */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   );

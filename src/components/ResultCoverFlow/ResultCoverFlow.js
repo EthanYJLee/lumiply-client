@@ -10,6 +10,7 @@ const ResultCoverFlow = ({ images, activeId, onActiveChange }) => {
   const mouseDragStartY = useRef(null);
   const wheelBlockedUntilRef = useRef(0);
   const rootRef = useRef(null);
+  const [loadedMap, setLoadedMap] = useState({});
 
   // 이미지 배열이 바뀌면 인덱스를 0으로 리셋
   useEffect(() => {
@@ -25,14 +26,16 @@ const ResultCoverFlow = ({ images, activeId, onActiveChange }) => {
     }
   }, [activeId, images]);
 
-  // 현재 활성 이미지 변경 시 콜백
-  useEffect(() => {
-    if (!images || images.length === 0) return;
-    const current = images[currentIndex];
-    if (current && onActiveChange) {
-      onActiveChange(current.id);
-    }
-  }, [currentIndex, images, onActiveChange]);
+  // 사용자 인터랙션으로 인덱스를 변경할 때만 상위에 active 변경 알림
+  const setIndexFromUser = (updater) => {
+    setCurrentIndex((prev) => {
+      const nextIndex = typeof updater === "function" ? updater(prev) : updater;
+      if (images && images[nextIndex] && onActiveChange) {
+        onActiveChange(images[nextIndex].id);
+      }
+      return nextIndex;
+    });
+  };
 
   // wheel 이벤트를 passive: false로 등록해야 preventDefault()가 작동함
   useEffect(() => {
@@ -58,9 +61,9 @@ const ResultCoverFlow = ({ images, activeId, onActiveChange }) => {
 
       // 방향에 따라 인덱스를 정확히 한 칸만 이동
       if (dy > 0) {
-        setCurrentIndex((prev) => Math.min(prev + 1, images.length - 1));
+        setIndexFromUser((prev) => Math.min(prev + 1, images.length - 1));
       } else {
-        setCurrentIndex((prev) => Math.max(prev - 1, 0));
+        setIndexFromUser((prev) => Math.max(prev - 1, 0));
       }
 
       // 다음 이동까지 차단
@@ -90,9 +93,9 @@ const ResultCoverFlow = ({ images, activeId, onActiveChange }) => {
     const diff = touchStartY.current - e.touches[0].clientY;
     if (Math.abs(diff) > 40) {
       if (diff > 0) {
-        setCurrentIndex((prev) => Math.min(prev + 1, images.length - 1));
+        setIndexFromUser((prev) => Math.min(prev + 1, images.length - 1));
       } else {
-        setCurrentIndex((prev) => Math.max(prev - 1, 0));
+        setIndexFromUser((prev) => Math.max(prev - 1, 0));
       }
       touchStartY.current = e.touches[0].clientY;
     }
@@ -113,9 +116,9 @@ const ResultCoverFlow = ({ images, activeId, onActiveChange }) => {
     const DRAG_THRESHOLD = 40;
     if (Math.abs(diff) > DRAG_THRESHOLD) {
       if (diff > 0) {
-        setCurrentIndex((prev) => Math.min(prev + 1, images.length - 1));
+        setIndexFromUser((prev) => Math.min(prev + 1, images.length - 1));
       } else {
-        setCurrentIndex((prev) => Math.max(prev - 1, 0));
+        setIndexFromUser((prev) => Math.max(prev - 1, 0));
       }
       mouseDragStartY.current = e.clientY;
     }
@@ -168,11 +171,40 @@ const ResultCoverFlow = ({ images, activeId, onActiveChange }) => {
                 zIndex,
                 opacity,
               }}
-              onClick={() => setCurrentIndex(index)}
+              onClick={() => setIndexFromUser(index)}
             >
               <div className="result-coverflow-image-wrapper">
-                <img src={img.url} alt={img.label || img.id} className="result-coverflow-image" />
-                <div className="result-coverflow-shine" />
+                {img.url ? (
+                  <>
+                    {!loadedMap[img.id] && (
+                      <div className="result-coverflow-loading">
+                        <div className="circular-loader-sm" />
+                        <div className="result-coverflow-loading-text">이미지를 불러오는 중입니다...</div>
+                      </div>
+                    )}
+                    <img
+                      src={img.url}
+                      alt={img.label || img.id}
+                      className="result-coverflow-image"
+                      onLoad={() =>
+                        setLoadedMap((prev) => ({
+                          ...prev,
+                          [img.id]: true,
+                        }))
+                      }
+                      style={{
+                        opacity: loadedMap[img.id] ? 1 : 0,
+                        transition: "opacity 0.25s ease",
+                      }}
+                    />
+                    <div className="result-coverflow-shine" />
+                  </>
+                ) : (
+                  <div className="result-coverflow-loading">
+                    <div className="circular-loader-sm" />
+                    <div className="result-coverflow-loading-text">결과를 생성하는 중입니다...</div>
+                  </div>
+                )}
               </div>
 
               <div
@@ -191,7 +223,7 @@ const ResultCoverFlow = ({ images, activeId, onActiveChange }) => {
             key={img.id || idx}
             type="button"
             className={`result-coverflow-indicator ${idx === currentIndex ? "active" : ""}`}
-            onClick={() => setCurrentIndex(idx)}
+            onClick={() => setIndexFromUser(idx)}
           />
         ))}
       </div>
