@@ -23,8 +23,8 @@ Lumiply 프로젝트의 **프론트엔드(SPA)** 저장소입니다.
   방 사진 업로드, 조명 배치, 결과 비교 및 히스토리 관리 UI
 - `lumiply-server` (FastAPI):  
   클라이언트에서 합성한 이미지를 받아 Colab으로 전달하고, 색상별 결과/진행률을 취합
-- `lumiply-colab` (Colab + Flask + LumiNet):  
-  LumiNet 기반 조명 생성 모델을 실제로 실행하고 `/process` 로 결과를 반환
+- `lumiply-colab` (Colab + Flask + Lumiply):  
+  Lumiply 조명 생성 모델을 실제로 실행하고 `/process` 로 결과를 반환
 
 ---
 
