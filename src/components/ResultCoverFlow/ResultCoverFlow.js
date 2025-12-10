@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 
 /**
- * 단일 컬러별 결과 이미지를 세로 방향 coverflow 형태로 보여주는 컴포넌트
+ * 색상별 결과 이미지를 세로 방향 coverflow 형태로 보여주는 컴포넌트입니다.
+ *
+ * - wheel / 터치 / 드래그로 한 번에 한 색상씩만 이동하도록 제어합니다.
+ * - onActiveChange 는 실제 사용자 인터랙션이 있을 때만 호출하여 상위 상태와 동기화합니다.
+ *
  * @param {{ images: { id: string; url: string; label?: string }[], activeId?: string, onActiveChange?: (id: string) => void }} props
  */
 const ResultCoverFlow = ({ images, activeId, onActiveChange }) => {

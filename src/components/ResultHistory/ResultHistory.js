@@ -1,5 +1,11 @@
 import React from "react";
 
+/**
+ * 생성된 결과들을 시간 순으로 나열해 주는 히스토리 패널입니다.
+ *
+ * - 각 항목은 합성 프리뷰(입력+조명)를 우선 썸네일로 사용하고, 없으면 결과 이미지를 사용합니다.
+ * - 키보드/스크린리더 접근성을 위해 role="button" 과 키보드 핸들러를 함께 제공합니다.
+ */
 const ResultHistory = ({ history, activeId, onSelect, onRemove, onClearAll }) => {
   const items = history || [];
 

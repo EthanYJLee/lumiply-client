@@ -194,7 +194,7 @@ lumiply-client/
 
 ### 6. 환경 변수
 
-백엔드 주소를 바꾸고 싶을 때는 프로젝트 루트에 `.env` 파일을 만들고 다음 값을 설정합니다.
+백엔드 주소를 바꾸고 싶을 때는 프로젝트 루트에 `.env.local` 파일을 만들고 다음 값을 설정합니다.
 
 ```env
 REACT_APP_API_URL=http://localhost:8000

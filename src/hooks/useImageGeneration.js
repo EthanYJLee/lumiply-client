@@ -4,8 +4,12 @@ import { uploadImage, pollJobStatus } from "../services/api";
 import { API_BASE_URL } from "../constants/defaultValues";
 
 /**
- * 이미지 생성 및 처리 관리를 위한 커스텀 훅
- * @returns {Object} 이미지 생성 관련 상태 및 핸들러
+ * 업로드된 방 이미지와 조명 정보를 기반으로
+ * - 클라이언트에서 1차 합성(preview)을 만들고
+ * - FastAPI/Colab 쪽으로 실제 생성 요청을 보내며
+ * - 폴링을 통해 부분 결과와 최종 결과를 모두 관리하는 훅입니다.
+ *
+ * 반환값에는 진행 상태, 결과 이미지/색상 맵, 히스토리, 컬러 변경용 헬퍼 등이 포함됩니다.
  */
 export const useImageGeneration = () => {
   const [processingStatus, setProcessingStatus] = useState(null);
@@ -22,8 +26,14 @@ export const useImageGeneration = () => {
   const HISTORY_STORAGE_KEY = "lumiply:history";
 
   /**
-   * 이미지 생성 및 서버 전송
-   * - 합성 결과는 항상 업로드한 원본 이미지와 동일한 해상도로 생성
+   * 업로드된 방 이미지와 조명 정보를 이용해 클라이언트에서 합성 이미지를 만들고,
+   * 그 결과를 서버로 업로드하여 생성 작업을 시작합니다.
+   *
+   * @param {File} uploadedFile - 유저가 업로드한 원본 방 이미지
+   * @param {Array} lights - 합성에 사용할 조명 배열 (위치/스케일/색온도/강도 포함)
+   * @param {{width: number, height: number}|undefined} displaySize - 에디터에서 실제로 그려진 영역의 픽셀 크기
+   * @returns {Promise<{job_id: string, message: string}>} - 서버에서 생성한 작업 ID 및 안내 메시지
+   * @throws {Error} - 이미지/조명이 없는 경우 또는 합성/업로드 중 오류가 발생한 경우
    */
   const generateAndUpload = useCallback(async (uploadedFile, lights, displaySize) => {
     if (!uploadedFile || lights.length === 0) {
@@ -74,7 +84,13 @@ export const useImageGeneration = () => {
   }, []);
 
   /**
-   * 작업 상태 폴링 시작
+   * 특정 jobId 에 대한 서버 측 처리 상태를 폴링합니다.
+   *
+   * - onStatusUpdate: 매 폴링마다 현재 상태를 전달 (부분 결과 포함)
+   * - onComplete: status.status === "completed" 인 시점에 한 번 호출
+   * - onError: 네트워크 오류나 서버 오류, 타임아웃이 발생한 경우 호출
+   *
+   * 내부적으로 resultImagesByColor / history / compositedPreviewUrl 도 함께 갱신됩니다.
    */
   const startJobPolling = useCallback(
     (jobId) => {
@@ -270,7 +286,10 @@ export const useImageGeneration = () => {
   );
 
   /**
-   * 처리 상태 초기화
+   * 현재 진행 중인 생성 작업과 관련된 상태를 초기화합니다.
+   *
+   * - 새 이미지를 업로드하거나, 세션을 리셋할 때 사용합니다.
+   * - 히스토리(사용자 작업 로그)는 그대로 유지합니다.
    */
   const resetProcessingStatus = useCallback(() => {
     setProcessingStatus(null);
@@ -284,8 +303,10 @@ export const useImageGeneration = () => {
   }, [compositedPreviewUrl]);
 
   /**
-   * 선택한 색상에 따라 현재 표시할 결과 이미지를 변경
-   * - resultImagesByColor 에 해당 색상이 존재할 때만 반영
+   * 선택한 색상 키에 따라 대표 결과 이미지 URL(resultImageUrl)을 변경합니다.
+   *
+   * @param {string} colorKey - "white" | "red" | ... 와 같은 팔레트 키
+   * resultImagesByColor 에 해당 키가 존재하는 경우에만 반영합니다.
    */
   const setActiveResultColor = useCallback(
     (colorKey) => {

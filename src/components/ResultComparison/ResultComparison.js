@@ -1,9 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 
 /**
- * 원본 / 결과 이미지를 슬라이더로 비교하는 컴포넌트
- * - image-container 와 동일한 박스 안에서 object-fit: contain 으로 렌더링되도록
- *   별도의 aspect-ratio 강제 없이 width:100% 만 사용
+ * 원본 / 결과 이미지를 한 컨테이너 안에서 슬라이더로 비교하는 컴포넌트입니다.
+ *
+ * - 마우스/터치 위치를 기반으로 슬라이더 핸들의 위치를 계산합니다.
+ * - 두 이미지가 모두 로드되기 전까지는 로딩 오버레이를 띄워 "스트리밍"되는 느낌을 줄입니다.
+ *
+ * originalUrl / resultImageUrl 이 둘 다 유효하지 않으면 null 을 반환해 렌더링을 건너뜁니다.
  */
 const ResultComparison = ({ originalUrl, resultImageUrl }) => {
   const [sliderPosition, setSliderPosition] = useState(50); // 0 ~ 100 (%)

@@ -60,7 +60,13 @@ function AppContent() {
   const [selectedColorKey, setSelectedColorKey] = useState("white");
   const [hasNavigatedToResult, setHasNavigatedToResult] = useState(false);
 
-  // 이미지 업로드 핸들러
+  /**
+   * 초기 업로드 화면 및 "이미지 재설정" 버튼에서 공통으로 사용하는 업로드 처리 핸들러입니다.
+   *
+   * - 업로드된 파일 상태를 갱신하고
+   * - 기존 조명 및 생성 상태, 히스토리 selection 을 모두 초기화한 뒤
+   * - 조명 배치 화면(/arrange) 으로 라우팅합니다.
+   */
   const handleFileUpload = useCallback(
     (file) => {
       setUploadedFile(file);
@@ -76,7 +82,7 @@ function AppContent() {
 
   const { getRootProps, getInputProps, isDragActive } = useImageUpload(uploadedFile, handleFileUpload);
 
-  // 드래그 앤 드롭 핸들러
+  // 드래그 앤 드롭 핸들러 (조명 생성/이동/리사이즈 콜백을 useDragAndDrop 으로 전달)
   const handleLightDrop = useCallback(
     (lightPath, position) => {
       if (lights.length >= 1) {

@@ -4,7 +4,13 @@ import ResultHistory from "../components/ResultHistory/ResultHistory";
 import ProductInfo from "../components/ProductInfo/ProductInfo";
 
 /**
- * 결과 보기 화면 (/result)
+ * 결과 보기 화면 (/result) 의 전체 레이아웃을 담당하는 페이지 컴포넌트입니다.
+ *
+ * - 좌측: 입력/결과 뷰(ResultView)
+ * - 우측 상단: 결과 히스토리(ResultHistory)
+ * - 우측 하단: 선택된 조명 상품 정보(ProductInfo)
+ *
+ * 히스토리/상품 선택 등 상위(App)에서 관리되는 상태를 그대로 전달하는 얇은 래퍼 역할을 합니다.
  */
 const ResultPage = ({
   previewUrl,
@@ -39,4 +45,3 @@ const ResultPage = ({
 };
 
 export default ResultPage;
-

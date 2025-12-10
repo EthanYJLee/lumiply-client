@@ -4,7 +4,13 @@ import ImageEditor from "../components/ImageEditor/ImageEditor";
 import ResultHistory from "../components/ResultHistory/ResultHistory";
 
 /**
- * 조명 배치 화면 (/arrange)
+ * 조명 배치 화면 (/arrange) 의 레이아웃을 구성하는 페이지 컴포넌트입니다.
+ *
+ * - 좌측: 조명 목록(드래그/클릭으로 배치)
+ * - 중앙: 이미지 에디터(조명 배치/적용)
+ * - 우측: 생성 히스토리
+ *
+ * 실제 상태와 비즈니스 로직은 상위(App)에서 관리하고, 이 컴포넌트는 배치와 이벤트 위임에 집중합니다.
  */
 const ArrangePage = ({
   uploadedFile,
@@ -87,4 +93,3 @@ const ArrangePage = ({
 };
 
 export default ArrangePage;
-

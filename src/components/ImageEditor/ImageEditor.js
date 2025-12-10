@@ -6,7 +6,13 @@ import DownloadIcon from "@mui/icons-material/Download";
 import { API_BASE_URL } from "../../constants/defaultValues";
 
 /**
- * 이미지 에디터 컴포넌트
+ * 조명 배치 화면의 중앙 에디터 영역을 담당합니다.
+ *
+ * - 결과가 없는 경우: 업로드된 방 이미지를 기준으로 조명 오버레이를 배치/리사이즈
+ * - 결과가 있는 경우: Before/After 슬라이더와 색상 팔레트, 결과 저장 버튼을 제공
+ *
+ * 상위(App/ArrangePage)에서 조명 상태와 이벤트 핸들러를 주입받고,
+ * 내부에서는 이미지 교체, 결과 저장 등 사용자 인터랙션 중심으로만 책임을 집니다.
  */
 const ImageEditor = ({
   uploadedFile,

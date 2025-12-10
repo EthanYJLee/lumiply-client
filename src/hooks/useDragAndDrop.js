@@ -2,13 +2,24 @@ import { useRef, useState, useCallback } from "react";
 import { DRAG_THRESHOLD } from "../constants/defaultValues";
 
 /**
- * 드래그 앤 드롭 기능을 위한 커스텀 훅
- * @param {Function} onLightDrop - 조명 드롭 핸들러
- * @param {Function} onLightDrag - 조명 드래그 핸들러
- * @param {Function} onLightResize - 조명 리사이즈 핸들러
- * @param {Function} onLightSelect - 조명 선택 핸들러
- * @param {Object} mainImageRef - main-image ref
- * @returns {Object} 드래그 관련 refs 및 핸들러
+ * 조명 아이콘을 캔버스 위로 드래그/드롭하고, 배치된 조명을 마우스로 이동·리사이즈할 때 필요한
+ * 상태와 이벤트 핸들러를 모두 캡슐화한 훅입니다.
+ *
+ * @param {Function} onLightDrop   - 새 조명을 이미지 위에 드롭했을 때 호출 (lightPath, {x,y}%)
+ * @param {Function} onLightDrag   - 배치된 조명을 드래그로 이동할 때 호출 (lightId, {x,y}%)
+ * @param {Function} onLightResize - 리사이즈 핸들에서 드래그할 때 호출 (lightId, scale)
+ * @param {Function} onLightSelect - 조명을 클릭/드래그 시작할 때 선택 처리 콜백 (lightId)
+ * @param {Object} mainImageRef    - 실제 방 이미지를 가리키는 ref (object-fit: contain 상태에서 bounds 계산용)
+ * @returns {{
+ *   isDragging: boolean,
+ *   isResizing: boolean,
+ *   imageContainerRef: React.RefObject<HTMLElement>,
+ *   handleLightDragStart: (e: DragEvent, lightPath: string) => void,
+ *   handleImageDrop: (e: DragEvent) => void,
+ *   handleImageDragOver: (e: DragEvent) => void,
+ *   handleOverlayMouseDown: (e: MouseEvent, lightId: number) => void,
+ *   handleResizeStart: (e: MouseEvent, lightId: number, light: Object, getContainerRect: Function) => void,
+ * }} 드래그 관련 refs 및 핸들러
  */
 export const useDragAndDrop = (onLightDrop, onLightDrag, onLightResize, onLightSelect, mainImageRef) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -20,7 +31,8 @@ export const useDragAndDrop = (onLightDrop, onLightDrag, onLightResize, onLightS
   const imageContainerRef = useRef(null);
 
   /**
-   * 조명 드래그 시작
+   * 좌측 조명 리스트에서 이미지를 끌어오기 시작할 때 호출됩니다.
+   * - 브라우저 기본 drag 이미지는 사용하지 않고, lightPath 만 ref 에 기록합니다.
    */
   const handleLightDragStart = useCallback((e, lightPath) => {
     e.preventDefault();
@@ -28,7 +40,9 @@ export const useDragAndDrop = (onLightDrop, onLightDrag, onLightResize, onLightS
   }, []);
 
   /**
-   * main-image의 실제 bounds를 계산하는 함수
+   * 현재 이미지 컨테이너 내에서 main-image 가 차지하는 실제 픽셀 영역을 계산합니다.
+   * - object-fit: contain 으로 그려지는 특성을 고려해, 컨테이너 기준 offset/width/height 를 반환합니다.
+   * - 이미지가 아직 로드되지 않은 경우 null 을 반환합니다.
    */
   const getMainImageBounds = useCallback(() => {
     if (!imageContainerRef.current || !mainImageRef?.current) {
@@ -55,7 +69,10 @@ export const useDragAndDrop = (onLightDrop, onLightDrag, onLightResize, onLightS
   }, [mainImageRef]);
 
   /**
-   * 이미지에 조명 드롭
+   * 드롭 존 위에 드래그하던 조명을 떨어뜨렸을 때 호출됩니다.
+   *
+   * - main-image bounds 가 계산 가능한 경우, 조명이 실제 이미지 내부에서만 떨어지도록 좌표를 클램핑합니다.
+   * - bounds 를 얻지 못하면 컨테이너 전체를 기준으로 퍼센트 좌표를 계산합니다.
    */
   const handleImageDrop = useCallback(
     (e) => {
@@ -91,14 +108,18 @@ export const useDragAndDrop = (onLightDrop, onLightDrag, onLightResize, onLightS
   );
 
   /**
-   * 드래그 오버 핸들러
+   * 브라우저 기본 드롭 동작을 막기 위한 drag over 핸들러입니다.
    */
   const handleImageDragOver = useCallback((e) => {
     e.preventDefault();
   }, []);
 
   /**
-   * 조명 오버레이 마우스 다운 (드래그 시작)
+   * 배치된 조명 오버레이를 마우스로 누를 때 호출됩니다.
+   *
+   * - 제거 버튼/리사이즈 핸들을 클릭한 경우에는 드래그를 시작하지 않습니다.
+   * - 일정 threshold 이상 움직였을 때만 실제 드래그로 간주하고 onLightDrag 를 호출합니다.
+   * - 클릭만 하고 떼면 onLightSelect 로 선택만 처리합니다.
    */
   const handleOverlayMouseDown = useCallback(
     (e, lightId) => {
@@ -181,7 +202,11 @@ export const useDragAndDrop = (onLightDrop, onLightDrag, onLightResize, onLightS
   );
 
   /**
-   * 리사이즈 시작
+   * 선택된 조명의 리사이즈 핸들을 드래그하기 시작했을 때 호출됩니다.
+   *
+   * - 조명 중심과 마우스 위치 사이의 거리 비율을 기준으로 scale 을 계산합니다.
+   * - 너무 작거나 큰 값은 0.3 ~ 3.0 범위로 제한합니다.
+   * - 리사이즈 중에는 isResizing 플래그가 true 로 유지됩니다.
    */
   const handleResizeStart = useCallback(
     (e, lightId, light, getContainerRect) => {

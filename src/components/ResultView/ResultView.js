@@ -6,9 +6,12 @@ import DownloadIcon from "@mui/icons-material/Download";
 import { API_BASE_URL } from "../../constants/defaultValues";
 
 /**
- * 결과 전용 화면
- * - 좌측: 인풋(합성) 이미지
- * - 우측: 색상별 결과 이미지를 세로 coverflow 로 브라우징
+ * 결과 전용 화면 우측의 메인 뷰입니다.
+ *
+ * - 기본 모드(split): 좌측에 인풋(합성) 이미지, 우측에 세로 coverflow 형태의 색상별 결과 리스트를 보여줍니다.
+ * - 비교 모드(comparison): 인풋 이미지와 선택 색상 결과를 슬라이더로 직접 비교할 수 있습니다.
+ *
+ * 내부에서 activeColor, viewMode, 결과 저장(download) 등의 UI 상태를 관리합니다.
  */
 const ResultView = ({ previewUrl, imagesByColor, initialColorKey = "white" }) => {
   // 팔레트 정의 순서에 맞춰 항상 동일한 색상 순서를 유지
