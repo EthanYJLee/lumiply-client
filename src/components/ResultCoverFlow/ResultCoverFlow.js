@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { proxiedImageUrl } from "../../utils/imageUtils";
 
 /**
  * 색상별 결과 이미지를 세로 방향 coverflow 형태로 보여주는 컴포넌트입니다.
@@ -19,7 +20,7 @@ const ResultCoverFlow = ({ images, activeId, onActiveChange }) => {
   // 이미지 배열이 바뀌면 인덱스를 0으로 리셋
   useEffect(() => {
     setCurrentIndex(0);
-  }, [images]);
+  }, [images]); // setIndexFromUser는 렌더마다 새로 생성되므로 의도적으로 deps에서 제외
 
   // 외부에서 activeId 가 주어지면 동기화
   useEffect(() => {
@@ -31,15 +32,18 @@ const ResultCoverFlow = ({ images, activeId, onActiveChange }) => {
   }, [activeId, images]);
 
   // 사용자 인터랙션으로 인덱스를 변경할 때만 상위에 active 변경 알림
-  const setIndexFromUser = (updater) => {
-    setCurrentIndex((prev) => {
-      const nextIndex = typeof updater === "function" ? updater(prev) : updater;
-      if (images && images[nextIndex] && onActiveChange) {
-        onActiveChange(images[nextIndex].id);
-      }
-      return nextIndex;
-    });
-  };
+  const setIndexFromUser = useCallback(
+    (updater) => {
+      setCurrentIndex((prev) => {
+        const nextIndex = typeof updater === "function" ? updater(prev) : updater;
+        if (images && images[nextIndex] && onActiveChange) {
+          onActiveChange(images[nextIndex].id);
+        }
+        return nextIndex;
+      });
+    },
+    [images, onActiveChange]
+  );
 
   // wheel 이벤트를 passive: false로 등록해야 preventDefault()가 작동함
   useEffect(() => {
@@ -80,7 +84,7 @@ const ResultCoverFlow = ({ images, activeId, onActiveChange }) => {
     return () => {
       rootEl.removeEventListener("wheel", handleWheel);
     };
-  }, [images]);
+  }, [images, setIndexFromUser]);
 
   if (!images || images.length === 0) return null;
 
@@ -187,7 +191,7 @@ const ResultCoverFlow = ({ images, activeId, onActiveChange }) => {
                       </div>
                     )}
                     <img
-                      src={img.url}
+                      src={proxiedImageUrl(img.url)}
                       alt={img.label || img.id}
                       className="result-coverflow-image"
                       onLoad={() =>

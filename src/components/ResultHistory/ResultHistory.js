@@ -1,4 +1,5 @@
 import React from "react";
+import { proxiedImageUrl } from "../../utils/imageUtils";
 
 /**
  * 생성된 결과들을 시간 순으로 나열해 주는 히스토리 패널입니다.
@@ -55,7 +56,7 @@ const ResultHistory = ({ history, activeId, onSelect, onRemove, onClearAll }) =>
               >
                 <div className="result-history-thumb-wrapper">
                   {thumbSrc ? (
-                    <img src={thumbSrc} alt="Result thumbnail" className="result-history-thumb" />
+                    <img src={proxiedImageUrl(thumbSrc)} alt="Result thumbnail" className="result-history-thumb" />
                   ) : (
                     <div className="result-history-thumb placeholder" />
                   )}

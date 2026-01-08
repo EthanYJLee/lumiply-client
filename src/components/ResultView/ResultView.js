@@ -4,6 +4,7 @@ import ResultComparison from "../ResultComparison/ResultComparison";
 import { PALETTE } from "../../constants/colorPalette";
 import DownloadIcon from "@mui/icons-material/Download";
 import { API_BASE_URL } from "../../constants/defaultValues";
+import { proxiedImageUrl } from "../../utils/imageUtils";
 
 /**
  * 결과 전용 화면 우측의 메인 뷰입니다.
@@ -19,6 +20,7 @@ const ResultView = ({ previewUrl, imagesByColor, initialColorKey = "white" }) =>
     const keys = PALETTE.map((p) => p.key);
     return keys.map((key) => ({
       id: key,
+      // 원본 URL은 그대로 유지하고, 실제 <img src>에서만 proxied 처리 (다운로드/히스토리 로직도 안전)
       url: imagesByColor && imagesByColor[key] ? imagesByColor[key] : null,
       label: key,
     }));
@@ -36,6 +38,7 @@ const ResultView = ({ previewUrl, imagesByColor, initialColorKey = "white" }) =>
   }, [imagesByColor, activeColor]);
 
   const handleSaveResult = useCallback(async () => {
+    // 저장/다운로드는 "원본 URL"을 대상으로 해야 프록시 중첩(재귀)을 피할 수 있음
     const targetUrl = currentUrl;
 
     if (!targetUrl) {
@@ -103,7 +106,7 @@ const ResultView = ({ previewUrl, imagesByColor, initialColorKey = "white" }) =>
                 </div>
               </div>
               <div className="result-view-image-frame">
-                <img src={previewUrl} alt="Input preview" className="result-view-image" />
+                <img src={proxiedImageUrl(previewUrl)} alt="Input preview" className="result-view-image" />
               </div>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { proxiedImageUrl } from "../../utils/imageUtils";
 
 /**
  * 원본 / 결과 이미지를 한 컨테이너 안에서 슬라이더로 비교하는 컴포넌트입니다.
@@ -79,7 +80,7 @@ const ResultComparison = ({ originalUrl, resultImageUrl }) => {
   return (
     <div className="comparison-slider-container" ref={containerRef} onMouseDown={handleMouseDown} onTouchStart={handleTouchStart}>
       <img
-        src={originalUrl}
+        src={proxiedImageUrl(originalUrl)}
         alt="Original"
         className="comparison-image comparison-image-original"
         onLoad={() => setOriginalLoaded(true)}
@@ -89,7 +90,7 @@ const ResultComparison = ({ originalUrl, resultImageUrl }) => {
         }}
       />
       <img
-        src={resultImageUrl}
+        src={proxiedImageUrl(resultImageUrl)}
         alt="Result"
         className="comparison-image comparison-image-result"
         onLoad={() => setResultLoaded(true)}
